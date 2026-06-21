@@ -5,11 +5,13 @@ title: Discovery Starter
 summary: A reusable starting point for understanding an initiative and its operating context.
 route: /knowledge/discovery-starter
 attributes:
-  knowledge-kind: guide
-  focus-area:
+  categories:
     - discovery
     - business-assessment
+    - requirements
+  level: level-1
   lifecycle: draft
+  artifactKind: question-set
   audience:
     - engineers
     - agents

@@ -5,12 +5,14 @@ title: Delivery Readiness Checklist
 summary: A compact reusable checklist for reviewing an initial delivery foundation.
 route: /knowledge/delivery-readiness-checklist
 attributes:
-  knowledge-kind: checklist
-  focus-area:
+  categories:
     - quality
     - testing
     - governance
+    - security
+  level: asset
   lifecycle: review
+  artifactKind: checklist
 relationships:
   - type: validates
     target: static-delivery-decision

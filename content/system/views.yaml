@@ -1,21 +1,44 @@
+schemaVersion: "1"
 defaultView: catalog
+
 views:
   - id: catalog
-    label: Knowledge catalog
+    label: Catalog
     layout: cards
+    source: entries
     fields:
       - title
       - summary
-      - attributes
+      - attributes.categories
+      - attributes.artifactKind
+      - attributes.level
     sortBy: title
-  - id: by-focus
-    label: Grouped by focus
+
+  - id: category-groups
+    label: Category Groups
+    layout: grouped-cards
+    source: entries
+    groupBy: attributes.categories
+    allowMultiplePlacement: true
+    sortBy: title
+
+  - id: levels
+    label: Levels
+    layout: hierarchical-cards
+    source: entries
+    groupBy: attributes.level
+    sortBy: title
+
+  - id: artifact-kinds
+    label: Artifact Kinds
     layout: grouped-list
-    groupBy: attributes.focus-area
+    source: entries
+    groupBy: attributes.artifactKind
     sortBy: title
-  - id: approved
-    label: Approved knowledge
-    layout: cards
-    filters:
-      attributes.lifecycle: approved
+
+  - id: lifecycle
+    label: Lifecycle
+    layout: columns
+    source: entries
+    groupBy: attributes.lifecycle
     sortBy: title

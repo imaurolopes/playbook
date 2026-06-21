@@ -1,106 +1,177 @@
-dimensions:
-  - id: knowledge-kind
-    label: Knowledge kind
-    options:
-      - value: guide
-        label: Guide
-        icon: "📘"
-        color: "#2563eb"
-        order: 10
-      - value: decision-record
-        label: Decision record
-        icon: "⚖️"
-        color: "#7c3aed"
-        order: 20
-      - value: checklist
-        label: Checklist
-        icon: "✅"
-        color: "#059669"
-        order: 30
-      - value: project-output
-        label: Project output
-        icon: "📦"
-        color: "#d97706"
-        order: 40
+schemaVersion: "1"
 
-  - id: focus-area
-    label: Focus area
+dimensions:
+  - id: categories
+    label: Categories
+    cardinality: many
+    groups:
+      - id: assessment
+        label: Assessment
+        order: 10
+      - id: engineering
+        label: Engineering
+        order: 20
+      - id: operations
+        label: Operations
+        order: 30
+      - id: enablement
+        label: Enablement
+        order: 40
     options:
       - value: discovery
         label: Discovery
-        icon: "🔎"
+        group: assessment
+        icon: search
         color: "#0284c7"
         order: 10
       - value: business-assessment
         label: Business Assessment
-        icon: "📊"
+        group: assessment
+        icon: chart-no-axes-combined
         color: "#4f46e5"
         order: 20
-      - value: technical-requirements
-        label: Technical Requirements
-        icon: "🧩"
+      - value: technical-assessment
+        label: Technical Assessment
+        group: assessment
+        icon: scan-search
         color: "#7c3aed"
         order: 30
-      - value: budget-assessment
-        label: Budget Assessment
-        icon: "💰"
-        color: "#ca8a04"
+      - value: requirements
+        label: Requirements
+        group: assessment
+        icon: list-checks
+        color: "#2563eb"
         order: 40
-      - value: architecture-decisions
-        label: Architecture Decisions
-        icon: "🏛️"
-        color: "#9333ea"
+      - value: budget
+        label: Budget
+        group: assessment
+        icon: circle-dollar-sign
+        color: "#ca8a04"
         order: 50
-      - value: solution-design
-        label: Solution Design
-        icon: "✏️"
-        color: "#db2777"
+      - value: architecture
+        label: Architecture
+        group: engineering
+        icon: landmark
+        color: "#9333ea"
         order: 60
-      - value: implementation-guidance
-        label: Implementation Guidance
-        icon: "🛠️"
-        color: "#ea580c"
-        order: 70
-      - value: quality
-        label: Quality
-        icon: "✨"
-        color: "#16a34a"
-        order: 80
       - value: security
         label: Security
-        icon: "🛡️"
+        group: engineering
+        icon: shield-check
         color: "#dc2626"
-        order: 90
+        order: 70
       - value: governance
         label: Governance
-        icon: "📜"
+        group: engineering
+        icon: scale
         color: "#475569"
+        order: 80
+      - value: quality
+        label: Quality
+        group: engineering
+        icon: badge-check
+        color: "#16a34a"
+        order: 90
+      - value: reliability
+        label: Reliability
+        group: operations
+        icon: heart-pulse
+        color: "#0d9488"
         order: 100
+      - value: integration
+        label: Integration
+        group: engineering
+        icon: plug
+        color: "#db2777"
+        order: 110
+      - value: processing
+        label: Processing
+        group: engineering
+        icon: workflow
+        color: "#ea580c"
+        order: 120
+      - value: storage
+        label: Storage
+        group: engineering
+        icon: database
+        color: "#0369a1"
+        order: 130
+      - value: observability
+        label: Observability
+        group: operations
+        icon: activity
+        color: "#0891b2"
+        order: 140
       - value: testing
         label: Testing
-        icon: "🧪"
-        color: "#0891b2"
-        order: 110
+        group: operations
+        icon: flask-conical
+        color: "#059669"
+        order: 150
       - value: skills
         label: Skills
-        icon: "🎓"
+        group: enablement
+        icon: graduation-cap
         color: "#6366f1"
-        order: 120
-      - value: agent-knowledge
-        label: Agent-ready Knowledge
-        icon: "🤖"
+        order: 160
+      - value: checklists
+        label: Checklists
+        group: enablement
+        icon: clipboard-check
+        color: "#65a30d"
+        order: 170
+      - value: agent-packages
+        label: Agent Packages
+        group: enablement
+        icon: bot
         color: "#0f766e"
-        order: 130
+        order: 180
+
+  - id: level
+    label: Level
+    cardinality: one
+    options:
+      - value: level-0
+        label: Level 0
+        icon: layers
+        color: "#0f172a"
+        order: 10
+      - value: level-1
+        label: Level 1
+        icon: panel-top
+        color: "#334155"
+        order: 20
+      - value: level-2
+        label: Level 2
+        icon: panels-top-left
+        color: "#475569"
+        order: 30
+      - value: level-3
+        label: Level 3
+        icon: rows-3
+        color: "#64748b"
+        order: 40
+      - value: asset
+        label: Asset
+        icon: file-box
+        color: "#2563eb"
+        order: 50
+      - value: project-output
+        label: Project Output
+        icon: folder-output
+        color: "#d97706"
+        order: 60
 
   - id: lifecycle
     label: Lifecycle
+    cardinality: one
     options:
       - value: draft
         label: Draft
         color: "#64748b"
         order: 10
       - value: review
-        label: In review
+        label: In Review
         color: "#d97706"
         order: 20
       - value: approved
@@ -111,3 +182,58 @@ dimensions:
         label: Deprecated
         color: "#dc2626"
         order: 40
+
+  - id: artifactKind
+    label: Artifact Kind
+    cardinality: one
+    options:
+      - value: concept
+        label: Concept
+        icon: lightbulb
+        color: "#0ea5e9"
+        order: 10
+      - value: question-set
+        label: Question Set
+        icon: messages-square
+        color: "#4f46e5"
+        order: 20
+      - value: decision-matrix
+        label: Decision Matrix
+        icon: table-properties
+        color: "#7c3aed"
+        order: 30
+      - value: checklist
+        label: Checklist
+        icon: list-checks
+        color: "#65a30d"
+        order: 40
+      - value: skill
+        label: Skill
+        icon: graduation-cap
+        color: "#6366f1"
+        order: 50
+      - value: guide
+        label: Guide
+        icon: book-open
+        color: "#2563eb"
+        order: 60
+      - value: template
+        label: Template
+        icon: copy
+        color: "#0891b2"
+        order: 70
+      - value: project-output
+        label: Project Output
+        icon: folder-output
+        color: "#d97706"
+        order: 80
+      - value: reference
+        label: Reference
+        icon: library
+        color: "#475569"
+        order: 90
+      - value: decision-record
+        label: Decision Record
+        icon: scale
+        color: "#9333ea"
+        order: 100

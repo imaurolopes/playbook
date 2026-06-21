@@ -1,13 +1,30 @@
+schemaVersion: "1"
 title: Playbook
+
 items:
-  - label: Start
-    icon: "⌂"
+  - label: Home
+    icon: house
     route: /
+
   - label: Explore
-    children:
-      - label: Discovery starter
-        entry: discovery-starter
-      - label: Decision record
-        entry: static-delivery-decision
-      - label: Readiness checklist
-        entry: delivery-readiness-checklist
+    icon: compass
+    source: taxonomy
+    taxonomy: categories
+    hierarchy: groups
+    routeTemplate: /categories/{value}
+
+  - label: Browse by Level
+    icon: layers
+    source: taxonomy
+    taxonomy: level
+    routeTemplate: /levels/{value}
+
+  - label: Browse by Artifact
+    icon: library
+    source: taxonomy
+    taxonomy: artifactKind
+    routeTemplate: /artifacts/{value}
+
+  - label: All Knowledge
+    icon: library-big
+    route: /knowledge

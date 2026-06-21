@@ -4,11 +4,14 @@ schema: project-output
 project: example-project
 title: Example Project Context
 attributes:
-  knowledge-kind: project-output
-  focus-area:
+  categories:
     - discovery
-    - technical-requirements
+    - technical-assessment
+    - requirements
+    - architecture
+  level: project-output
   lifecycle: draft
+  artifactKind: project-output
 sourceEntries:
   - discovery-starter
 data:
