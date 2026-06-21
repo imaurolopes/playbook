@@ -4,6 +4,9 @@ import { parse } from "yaml";
 import type {
   Entry,
   NavigationDefinition,
+  ProjectOutput,
+  ProjectWorkspace,
+  SchemasDefinition,
   TaxonomyDefinition,
   ThemeDefinition,
   ViewsDefinition
@@ -39,6 +42,36 @@ export function getEntryByRoute(route: string): Entry | undefined {
   );
 }
 
+export function getEntryById(id: string): Entry | undefined {
+  return getEntries().find((entry) => entry.id === id);
+}
+
+export function getProjects(): ProjectWorkspace[] {
+  return listYamlFiles(path.join(contentRoot, "projects"))
+    .filter((filePath) => path.basename(filePath).toLowerCase() === "project.yaml")
+    .map(
+      (filePath) =>
+        parse(fs.readFileSync(filePath, "utf8")) as ProjectWorkspace
+    )
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export function getProjectById(id: string): ProjectWorkspace | undefined {
+  return getProjects().find((project) => project.id === id);
+}
+
+export function getProjectOutputs(projectId?: string): ProjectOutput[] {
+  return listYamlFiles(path.join(contentRoot, "projects"))
+    .filter((filePath) => path.basename(filePath).toLowerCase() !== "project.yaml")
+    .map((filePath) => parse(fs.readFileSync(filePath, "utf8")) as ProjectOutput)
+    .filter(
+      (output) =>
+        output.schema === "project-output" &&
+        (!projectId || output.project === projectId)
+    )
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
 export function getNavigation(): NavigationDefinition {
   return readYaml<NavigationDefinition>("system/navigation.yaml");
 }
@@ -49,6 +82,10 @@ export function getTaxonomy(): TaxonomyDefinition {
 
 export function getViews(): ViewsDefinition {
   return readYaml<ViewsDefinition>("system/views.yaml");
+}
+
+export function getSchemas(): SchemasDefinition {
+  return readYaml<SchemasDefinition>("system/schemas.yaml");
 }
 
 export function getTheme(): ThemeDefinition {

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 import type { ReactNode } from "react";
 import { ContextBreadcrumbs } from "@/components/navigation/context-breadcrumbs";
 import { ContextualPanels } from "@/components/views/contextual-panels";
@@ -94,6 +96,16 @@ export function NodeViewRenderer({
           { label: entry.title }
         ]}
       />
+
+      <div className="flex justify-end">
+        <Link
+          href={`/authoring/edit/${encodeURIComponent(entry.id)}`}
+          className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium transition hover:bg-muted"
+        >
+          <Pencil className="size-3.5" />
+          Edit item
+        </Link>
+      </div>
 
       {selectorEnabled ? (
         <div className="flex justify-end">

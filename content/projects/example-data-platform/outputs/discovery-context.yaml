@@ -1,0 +1,30 @@
+schemaVersion: "1"
+id: example-data-platform-discovery-context
+schema: project-output
+project: example-data-platform
+title: Example Data Platform Discovery Context
+summary: Initial project-specific framing of desired outcomes, stakeholders, constraints, risks, and unknowns.
+attributes:
+  categories:
+    - discovery
+    - requirements
+  level: project-output
+  lifecycle: draft
+  artifactKind: project-output
+sourceEntries:
+  - discovery-facilitation
+  - discovery-report-template
+data:
+  desiredOutcome: Product and analytics teams can discover and consume governed data products with predictable freshness.
+  evidence:
+    - Teams currently maintain duplicated ingestion pipelines.
+    - Ownership and recovery expectations differ across domains.
+  nextDecision: Select the first domain and measurable platform increment.
+documents: []
+relationships:
+  - type: derived-from
+    target: example-data-platform
+  - type: consumes
+    target: discovery-report-template
+  - type: validates
+    target: discovery-readiness-checklist

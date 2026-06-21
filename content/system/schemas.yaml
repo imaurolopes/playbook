@@ -228,6 +228,8 @@ schemas:
       - project
       - title
     fields:
+      summary:
+        type: string
       project:
         type: string
       attributes:
@@ -239,6 +241,98 @@ schemas:
         type: object
       documents:
         type: list
+      relationships:
+        type: list
+        itemSchema: relationship
+
+  - id: project-workspace
+    label: Project workspace
+    storage: projects
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - status
+      - lifecycle
+      - stages
+    fields:
+      summary:
+        type: string
+      route:
+        type: string
+      status:
+        type: string
+        taxonomy: projectStatus
+      lifecycle:
+        type: string
+        taxonomy: lifecycle
+      categories:
+        type: list
+        taxonomy: categories
+      attributes:
+        type: object
+        taxonomyDriven: true
+      stakeholders:
+        type: list
+        itemSchema: stakeholder
+      constraints:
+        type: list
+        itemSchema: open-item
+      stages:
+        type: list
+        itemSchema: project-stage
+      selectedSkills:
+        type: list
+        itemSchema: node-reference
+      selectedTemplates:
+        type: list
+        itemSchema: node-reference
+      selectedChecklists:
+        type: list
+        itemSchema: node-reference
+      selectedDecisionMatrices:
+        type: list
+        itemSchema: node-reference
+      selectedArtifacts:
+        type: list
+        itemSchema: node-reference
+      outputs:
+        type: list
+        itemSchema: node-reference
+      risks:
+        type: list
+        itemSchema: project-risk
+      openQuestions:
+        type: list
+        itemSchema: open-item
+      relationships:
+        type: list
+        itemSchema: relationship
+      actions:
+        type: list
+        itemSchema: action
+
+  - id: agent-knowledge-package
+    label: Agent knowledge package
+    storage: generated
+    required:
+      - schemaVersion
+      - schema
+      - project
+      - generatedFiles
+    fields:
+      project:
+        type: string
+      packageVersion:
+        type: string
+      generatedFiles:
+        type: list
+        itemSchema: package-file
+      relationships:
+        type: list
+        itemSchema: relationship
 
   - id: knowledge-source
     label: Knowledge source
@@ -281,6 +375,86 @@ definitions:
       target:
         type: string
       label:
+        type: string
+
+  stakeholder:
+    required:
+      - id
+      - label
+    open: true
+    fields:
+      id:
+        type: string
+      label:
+        type: string
+      role:
+        type: string
+
+  project-stage:
+    required:
+      - stage
+      - status
+    open: true
+    fields:
+      stage:
+        type: string
+        taxonomy: projectStage
+      status:
+        type: string
+        taxonomy: projectStatus
+      summary:
+        type: string
+      outputs:
+        type: list
+        itemSchema: node-reference
+
+  project-risk:
+    required:
+      - id
+      - label
+    open: true
+    fields:
+      id:
+        type: string
+      label:
+        type: string
+      status:
+        type: string
+        taxonomy: projectStatus
+      owner:
+        type: string
+      mitigation:
+        type: string
+
+  action:
+    required:
+      - label
+      - href
+    open: true
+    fields:
+      label:
+        type: string
+      href:
+        type: string
+      icon:
+        type: string
+      appearance:
+        type: string
+
+  package-file:
+    required:
+      - id
+      - filename
+      - format
+    open: true
+    fields:
+      id:
+        type: string
+      filename:
+        type: string
+      label:
+        type: string
+      format:
         type: string
 
   artifact-section:

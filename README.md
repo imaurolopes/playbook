@@ -64,6 +64,34 @@ npm run build
 
 The production build is exported to `out/`.
 
+## Metadata-driven authoring
+
+Playbook includes a static authoring foundation:
+
+- `/authoring/new/` creates a new entry from a schema defined in
+  `content/system/schemas.yaml`.
+- `/authoring/edit/{entry-id}/` loads an existing entry into the same
+  schema-generated form.
+- The editor supports inherited schemas, generic fields, taxonomy-driven
+  attributes, relationships, references, YAML preview, validation, and local
+  browser drafts.
+
+YAML files remain the source of truth. The authoring UI does not update the
+repository and does not act as a CMS.
+
+Static GitHub Pages sites cannot write files back to the repository. After
+validation, use **Download YAML**, then manually place the downloaded file
+under `content/entries/`. For an edit, replace the existing YAML file and
+review the resulting repository diff before committing it.
+
+Drafts are stored in the current browser with `localStorage`. They are not
+synchronized between browsers or users and should not be treated as durable
+repository storage.
+
+A future version may integrate with the GitHub API to create a branch, commit
+the generated YAML, and open a pull request. That integration is intentionally
+not part of the current static foundation.
+
 ## GitHub Pages
 
 The workflow in `.github/workflows/deploy-pages.yml` builds and deploys the static export when `main` changes. In the repository settings, configure Pages to use **GitHub Actions** as its source.
@@ -72,6 +100,10 @@ The Next.js base path is inferred from `GITHUB_REPOSITORY` during the GitHub Act
 
 ## Current scope
 
-This foundation includes metadata loading, generic rendering, light/dark mode, YAML content, source provenance, Markdown documents, sample project outputs, shadcn/ui configuration, and GitHub Pages deployment.
+This foundation includes metadata loading, generic rendering, operational
+skills and artifacts, relationship navigation, static YAML authoring,
+light/dark mode, source provenance, Markdown documents, sample project
+outputs, shadcn/ui configuration, and GitHub Pages deployment.
 
-Graph visualization, dedicated skills pages, and agent package generation are intentionally not implemented.
+Backend persistence, GitHub commit integration, and agent package generation
+are intentionally not implemented.

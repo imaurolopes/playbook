@@ -1,6 +1,44 @@
 schemaVersion: "2"
 defaultView: concept-periodic
 
+agentPackage:
+  schema: agent-knowledge-package
+  packageVersion: "1"
+  defaultFile: context
+  files:
+    - id: context
+      filename: context.md
+      label: Context
+      format: markdown
+    - id: project
+      filename: project.yaml
+      label: Project
+      format: yaml
+    - id: skills
+      filename: skills.yaml
+      label: Skills
+      format: yaml
+    - id: selected-artifacts
+      filename: selected-artifacts.yaml
+      label: Selected Artifacts
+      format: yaml
+    - id: risks
+      filename: risks.yaml
+      label: Risks
+      format: yaml
+    - id: open-questions
+      filename: open-questions.yaml
+      label: Open Questions
+      format: yaml
+    - id: outputs
+      filename: outputs.yaml
+      label: Outputs
+      format: yaml
+    - id: relationships
+      filename: relationships.yaml
+      label: Relationships
+      format: yaml
+
 viewEngine:
   selectors:
     levelAttribute: level
@@ -70,6 +108,27 @@ viewEngine:
         enabledPanels:
           - detail
           - relationshipGraph
+    schema:
+      project-workspace:
+        layout: workspace
+        selectorEnabled: false
+        enabledPanels:
+          - relationshipGraph
+        detailSections:
+          - overview
+          - status
+          - stakeholders
+          - constraints
+          - stages
+          - selectedSkills
+          - selectedTemplates
+          - selectedChecklists
+          - selectedDecisionMatrices
+          - selectedArtifacts
+          - risks
+          - openQuestions
+          - outputs
+          - relationships
     artifactKind:
       skill:
         layout: skill
@@ -163,6 +222,9 @@ viewEngine:
       enabled: true
     artifact:
       label: Artifact
+      enabled: true
+    workspace:
+      label: Workspace
       enabled: true
     timeline:
       label: Timeline

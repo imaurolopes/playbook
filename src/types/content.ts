@@ -65,6 +65,46 @@ export interface Entry {
   rules?: MetadataValue[];
 }
 
+export interface ProjectWorkspace {
+  schemaVersion: string;
+  id: string;
+  schema: string;
+  title: string;
+  summary?: string;
+  route: string;
+  status: string;
+  lifecycle: string;
+  categories?: string[];
+  attributes?: Record<string, MetadataValue>;
+  stakeholders?: MetadataValue[];
+  constraints?: MetadataValue[];
+  stages?: MetadataValue[];
+  selectedSkills?: MetadataValue[];
+  selectedTemplates?: MetadataValue[];
+  selectedChecklists?: MetadataValue[];
+  selectedDecisionMatrices?: MetadataValue[];
+  selectedArtifacts?: MetadataValue[];
+  outputs?: MetadataValue[];
+  risks?: MetadataValue[];
+  openQuestions?: MetadataValue[];
+  relationships?: Relationship[];
+  actions?: EntryAction[];
+}
+
+export interface ProjectOutput {
+  schemaVersion: string;
+  id: string;
+  schema: string;
+  project: string;
+  title: string;
+  summary?: string;
+  attributes?: Record<string, MetadataValue>;
+  sourceEntries?: string[];
+  data?: Record<string, MetadataValue>;
+  documents?: DocumentReference[];
+  relationships?: Relationship[];
+}
+
 export interface NavigationNode {
   label: string;
   icon?: string;
@@ -179,7 +219,13 @@ export interface ViewLayoutSettings {
 }
 
 export interface ResolvedViewLayout extends ViewLayoutSettings {
-  source: "node" | "category" | "artifact" | "level" | "fallback";
+  source:
+    | "node"
+    | "schema"
+    | "category"
+    | "artifact"
+    | "level"
+    | "fallback";
   matchedCategory?: string;
   level?: string;
 }
@@ -237,5 +283,54 @@ export interface ViewEngineDefinition {
 export interface ViewsDefinition {
   defaultView: string;
   viewEngine: ViewEngineDefinition;
+  agentPackage?: AgentPackageDefinition;
   views: ViewDefinition[];
+}
+
+export interface AgentPackageFileDefinition {
+  id: string;
+  filename: string;
+  label: string;
+  format: "yaml" | "markdown";
+}
+
+export interface AgentPackageDefinition {
+  schema: string;
+  packageVersion?: string;
+  defaultFile?: string;
+  files: AgentPackageFileDefinition[];
+}
+
+export interface GeneratedPackageFile extends AgentPackageFileDefinition {
+  content: string;
+}
+
+export interface SchemaFieldDefinition {
+  type?: string;
+  itemSchema?: string;
+  taxonomy?: string;
+  taxonomyDriven?: boolean;
+  open?: boolean;
+}
+
+export interface ContentSchemaDefinition {
+  id: string;
+  label: string;
+  storage?: string;
+  extends?: string;
+  required?: string[];
+  constraints?: Record<string, { equals?: MetadataValue }>;
+  fields?: Record<string, SchemaFieldDefinition>;
+}
+
+export interface SchemaDefinition {
+  required?: string[];
+  open?: boolean;
+  fields?: Record<string, SchemaFieldDefinition>;
+}
+
+export interface SchemasDefinition {
+  schemaVersion: string;
+  schemas: ContentSchemaDefinition[];
+  definitions?: Record<string, SchemaDefinition>;
 }

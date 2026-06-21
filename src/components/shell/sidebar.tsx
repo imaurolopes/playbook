@@ -32,25 +32,31 @@ function SidebarBody({
           expanded ? "justify-between gap-3 px-3" : "justify-center px-2"
         }`}
       >
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className={`flex min-w-0 items-center ${
-            expanded ? "gap-3" : "justify-center"
-          }`}
-          title={!expanded ? title : undefined}
-        >
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <IconToken token="book-open" className="size-4" />
-          </span>
-          {expanded ? (
-            <span className="truncate font-semibold tracking-tight">
-              {title}
+        {expanded || !onToggle ? (
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className={`flex min-w-0 items-center ${
+              expanded ? "gap-3" : "justify-center"
+            }`}
+            title={!expanded ? title : undefined}
+          >
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <IconToken token="book-open" className="size-4" />
             </span>
-          ) : null}
-        </Link>
-        {expanded && onToggle ? (
-          <SidebarToggle expanded={expanded} onClick={onToggle} />
+            {expanded ? (
+              <span className="truncate font-semibold tracking-tight">
+                {title}
+              </span>
+            ) : null}
+          </Link>
+        ) : null}
+        {onToggle ? (
+          <SidebarToggle
+            expanded={expanded}
+            onClick={onToggle}
+            controls="desktop-sidebar"
+          />
         ) : null}
         {mobile ? (
           <button
@@ -78,9 +84,6 @@ function SidebarBody({
         }`}
       >
         <ThemeToggle />
-        {!expanded && onToggle ? (
-          <SidebarToggle expanded={expanded} onClick={onToggle} />
-        ) : null}
       </div>
     </div>
   );
@@ -104,6 +107,7 @@ export function SidebarShell({
       data-sidebar-expanded={sidebar.expanded}
     >
       <aside
+        id="desktop-sidebar"
         className={`fixed inset-y-0 left-0 z-40 hidden border-r bg-background/95 shadow-sm backdrop-blur transition-[width] duration-300 ease-out md:block ${
           sidebar.expanded ? "w-64" : "w-[4.5rem]"
         }`}

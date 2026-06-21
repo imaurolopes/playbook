@@ -6,6 +6,14 @@ const root = process.cwd();
 const contentRoot = path.join(root, "content");
 const taxonomyPath = path.join(contentRoot, "system", "taxonomy.yaml");
 const taxonomy = parse(fs.readFileSync(taxonomyPath, "utf8"));
+const schemasPath = path.join(contentRoot, "system", "schemas.yaml");
+const schemasDocument = parse(fs.readFileSync(schemasPath, "utf8"));
+const schemas = new Map(
+  (schemasDocument.schemas ?? []).map((schema) => [schema.id, schema])
+);
+const definitions = new Map(
+  Object.entries(schemasDocument.definitions ?? {})
+);
 const dimensions = new Map(
   (taxonomy.dimensions ?? []).map((dimension) => [
     dimension.id,
@@ -85,11 +93,70 @@ function validateRelationships(filePath, relationships) {
   }
 }
 
+function resolvedSchema(schema) {
+  if (!schema?.extends) return schema;
+  const parent = resolvedSchema(schemas.get(schema.extends));
+  return {
+    ...parent,
+    ...schema,
+    fields: {
+      ...(parent?.fields ?? {}),
+      ...(schema.fields ?? {})
+    }
+  };
+}
+
+function validateDefinedFields(filePath, value, definition, prefix = "") {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+
+  for (const [fieldName, field] of Object.entries(definition?.fields ?? {})) {
+    const fieldValue = value[fieldName];
+    if (fieldValue == null) continue;
+    const fieldPath = prefix ? `${prefix}.${fieldName}` : fieldName;
+
+    if (field.taxonomy) {
+      const dimension = dimensions.get(field.taxonomy);
+      if (!dimension) {
+        errors.push(
+          `${relative(schemasPath)}: ${definition.id ?? "definition"}.${fieldName} references unknown taxonomy dimension "${field.taxonomy}"`
+        );
+      } else {
+        for (const candidate of valuesOf(fieldValue)) {
+          if (
+            typeof candidate === "string" &&
+            !dimension.values.has(candidate)
+          ) {
+            report(filePath, fieldPath, candidate, field.taxonomy);
+          }
+        }
+      }
+    }
+
+    if (field.itemSchema) {
+      const itemDefinition = definitions.get(field.itemSchema);
+      if (!itemDefinition) continue;
+      const items = Array.isArray(fieldValue) ? fieldValue : [fieldValue];
+      items.forEach((item, index) =>
+        validateDefinedFields(
+          filePath,
+          item,
+          itemDefinition,
+          `${fieldPath}[${index}]`
+        )
+      );
+    }
+  }
+}
+
 for (const filePath of listFiles(contentRoot, /\.ya?ml$/i)) {
   if (filePath === taxonomyPath) continue;
   const document = parse(fs.readFileSync(filePath, "utf8")) ?? {};
   validateAttributes(filePath, document.attributes);
   validateRelationships(filePath, document.relationships);
+  if (typeof document.schema === "string") {
+    const schema = schemas.get(document.schema);
+    if (schema) validateDefinedFields(filePath, document, resolvedSchema(schema));
+  }
 }
 
 const navigationPath = path.join(contentRoot, "system", "navigation.yaml");
@@ -111,11 +178,57 @@ validateNavigation(navigation.items);
 const viewsPath = path.join(contentRoot, "system", "views.yaml");
 const views = parse(fs.readFileSync(viewsPath, "utf8"));
 const engine = views.viewEngine;
+const agentPackage = views.agentPackage;
 
 if (!engine?.fallback?.layout) {
   errors.push(
     `${relative(viewsPath)}: viewEngine.fallback.layout is required`
   );
+}
+
+if (agentPackage) {
+  if (!schemas.has(agentPackage.schema)) {
+    errors.push(
+      `${relative(viewsPath)}: agentPackage.schema references unknown schema "${agentPackage.schema}"`
+    );
+  }
+  const supportedPackageFiles = new Set([
+    "context",
+    "project",
+    "skills",
+    "selected-artifacts",
+    "risks",
+    "open-questions",
+    "outputs",
+    "relationships"
+  ]);
+  const packageFileIds = new Set();
+  for (const [index, file] of (agentPackage.files ?? []).entries()) {
+    if (!supportedPackageFiles.has(file.id)) {
+      errors.push(
+        `${relative(viewsPath)}: agentPackage.files[${index}] references unsupported generator "${file.id}"`
+      );
+    }
+    if (packageFileIds.has(file.id)) {
+      errors.push(
+        `${relative(viewsPath)}: agentPackage.files contains duplicate id "${file.id}"`
+      );
+    }
+    packageFileIds.add(file.id);
+    if (!["yaml", "markdown"].includes(file.format)) {
+      errors.push(
+        `${relative(viewsPath)}: agentPackage.files[${index}].format must be yaml or markdown`
+      );
+    }
+  }
+  if (
+    agentPackage.defaultFile &&
+    !packageFileIds.has(agentPackage.defaultFile)
+  ) {
+    errors.push(
+      `${relative(viewsPath)}: agentPackage.defaultFile references unknown file "${agentPackage.defaultFile}"`
+    );
+  }
 }
 
 const supportedLayouts = new Set([
@@ -127,7 +240,8 @@ const supportedLayouts = new Set([
   "table",
   "graph-placeholder",
   "skill",
-  "artifact"
+  "artifact",
+  "workspace"
 ]);
 const configuredLayouts = new Set(Object.keys(engine?.layouts ?? {}));
 
@@ -303,6 +417,18 @@ for (const [artifactKind, settings] of Object.entries(
   );
 }
 
+for (const [schemaId, settings] of Object.entries(
+  engine?.defaults?.schema ?? {}
+)) {
+  if (!schemas.has(schemaId)) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.defaults.schema references unknown schema "${schemaId}"`
+    );
+  }
+  validateLayoutReference(`viewEngine.defaults.schema.${schemaId}`, settings);
+  validatePanels(`viewEngine.defaults.schema.${schemaId}`, settings);
+}
+
 const categoryDimensionId = engine?.selectors?.categoryAttribute;
 const categoryDimension = categoryDimensionId
   ? dimensions.get(categoryDimensionId)
@@ -353,7 +479,7 @@ for (const [category, levels] of Object.entries(
 }
 
 const nodeIds = new Set();
-for (const directory of ["entries", "sources"]) {
+for (const directory of ["entries", "sources", "projects"]) {
   for (const filePath of listFiles(path.join(contentRoot, directory), /\.ya?ml$/i)) {
     const document = parse(fs.readFileSync(filePath, "utf8"));
     if (typeof document?.id === "string") nodeIds.add(document.id);

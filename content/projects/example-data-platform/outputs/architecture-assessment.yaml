@@ -1,0 +1,33 @@
+schemaVersion: "1"
+id: example-data-platform-architecture-assessment
+schema: project-output
+project: example-data-platform
+title: Example Data Platform Architecture Assessment
+summary: Project-specific assessment of platform boundaries, processing modes, contracts, and operational responsibilities.
+attributes:
+  categories:
+    - architecture
+    - processing
+    - integration
+    - reliability
+  level: project-output
+  lifecycle: draft
+  artifactKind: project-output
+sourceEntries:
+  - architecture-decision-skill
+  - architecture-assessment-template
+  - batch-vs-streaming-matrix
+data:
+  scope: First platform increment and its shared architectural guardrails.
+  decisionsPending:
+    - Default processing model for initial workloads
+    - Data contract ownership and compatibility policy
+    - Recovery objectives for shared services
+documents: []
+relationships:
+  - type: derived-from
+    target: example-data-platform
+  - type: consumes
+    target: architecture-assessment-template
+  - type: derived-from
+    target: batch-vs-streaming-matrix

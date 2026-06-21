@@ -1,0 +1,105 @@
+schemaVersion: "1"
+id: example-data-platform
+schema: project-workspace
+title: Example Data Platform
+summary: Establish a governed data platform that supports reliable batch and streaming workloads for product and analytics teams.
+route: /projects/example-data-platform
+status: active
+lifecycle: draft
+categories:
+  - discovery
+  - architecture
+  - processing
+  - quality
+  - governance
+attributes:
+  level: level-1
+stakeholders:
+  - id: platform-owner
+    label: Platform Owner
+    role: Accountable for outcomes and investment
+  - id: data-engineering
+    label: Data Engineering
+    role: Designs and operates platform capabilities
+  - id: product-analytics
+    label: Product Analytics
+    role: Consumes trusted analytical datasets
+constraints:
+  - id: static-governance
+    label: Architecture and delivery evidence must remain reviewable in Git.
+  - id: mixed-processing
+    label: The platform must support both scheduled and event-driven workloads.
+stages:
+  - stage: discovery
+    status: completed
+    summary: Outcomes, stakeholders, constraints, and initial evidence captured.
+    outputs:
+      - target: example-data-platform-discovery-context
+  - stage: assessment
+    status: active
+    summary: Business and technical boundaries are being assessed.
+  - stage: architecture
+    status: planned
+    summary: Platform boundaries and processing decisions will be recorded.
+    outputs:
+      - target: example-data-platform-architecture-assessment
+  - stage: implementation
+    status: planned
+  - stage: testing
+    status: planned
+  - stage: readiness
+    status: planned
+selectedSkills:
+  - target: discovery-facilitation
+  - target: technical-assessment-skill
+  - target: architecture-decision-skill
+  - target: data-quality-strategy-skill
+selectedTemplates:
+  - target: discovery-report-template
+  - target: architecture-assessment-template
+  - target: data-contract-template
+selectedChecklists:
+  - target: discovery-readiness-checklist
+  - target: architecture-review-checklist
+  - target: production-readiness-checklist
+selectedDecisionMatrices:
+  - target: batch-vs-streaming-matrix
+  - target: full-load-vs-incremental-matrix
+selectedArtifacts:
+  - target: data-quality-guideline
+  - target: delivery-governance
+  - target: research-static-knowledge-delivery
+outputs:
+  - target: example-data-platform-discovery-context
+  - target: example-data-platform-architecture-assessment
+risks:
+  - id: unclear-ownership
+    label: Cross-domain data ownership is not yet agreed.
+    status: active
+    owner: Platform Owner
+    mitigation: Establish domain ownership during assessment.
+  - id: processing-overreach
+    label: Supporting every processing mode could expand the first release.
+    status: planned
+    mitigation: Use decision matrices to constrain the initial platform scope.
+openQuestions:
+  - id: first-domain
+    prompt: Which data domain should validate the first platform increment?
+  - id: service-levels
+    prompt: Which freshness and recovery objectives are required for the first release?
+relationships:
+  - type: consumes
+    target: discovery-facilitation
+  - type: consumes
+    target: architecture-assessment-template
+  - type: depends-on
+    target: research-static-knowledge-delivery
+  - type: produces
+    target: example-data-platform-discovery-context
+  - type: produces
+    target: example-data-platform-architecture-assessment
+actions:
+  - label: Agent Package
+    icon: package-open
+    href: /projects/example-data-platform/agent-package
+    appearance: primary

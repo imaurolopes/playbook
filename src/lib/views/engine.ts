@@ -8,6 +8,7 @@ import type {
 
 export interface ViewResolutionContext {
   nodeId?: string;
+  schema?: string;
   level?: string;
   categories?: string[];
   artifactKind?: string;
@@ -80,6 +81,9 @@ export function resolveViewLayout(
   const artifactDefault = artifactKind
     ? engine.defaults?.artifactKind?.[artifactKind]
     : undefined;
+  const schemaDefault = context.schema
+    ? engine.defaults?.schema?.[context.schema]
+    : undefined;
   const categoryMatch = categories
     .map((category) => ({
       category,
@@ -97,12 +101,15 @@ export function resolveViewLayout(
     ...levelDefault,
     ...categoryMatch?.settings,
     ...artifactDefault,
+    ...schemaDefault,
     ...nodeOverride,
     ...context.settings
   };
   const source: ResolvedViewLayout["source"] = nodeOverride
     ? "node"
-    : artifactDefault
+    : schemaDefault
+      ? "schema"
+      : artifactDefault
       ? "artifact"
       : categoryMatch
         ? "category"

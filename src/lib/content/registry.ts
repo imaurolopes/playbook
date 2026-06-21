@@ -5,9 +5,15 @@ import type {
   Entry,
   KnowledgeNode,
   MetadataValue,
+  ProjectOutput,
+  ProjectWorkspace,
   Relationship
 } from "@/types/content";
-import { getEntries } from "@/lib/content/load";
+import {
+  getEntries,
+  getProjectOutputs,
+  getProjects
+} from "@/lib/content/load";
 
 const contentRoot = path.join(process.cwd(), "content");
 const documentsRoot = path.join(contentRoot, "documents");
@@ -163,12 +169,48 @@ function sourceNode(source: GenericRecord): KnowledgeNode {
   };
 }
 
+function projectNode(project: ProjectWorkspace): KnowledgeNode {
+  return {
+    id: project.id,
+    title: project.title,
+    summary: project.summary,
+    collection: "projects",
+    route: project.route,
+    attributes: {
+      ...(project.attributes ?? {}),
+      status: project.status,
+      lifecycle: project.lifecycle,
+      categories: project.categories ?? []
+    },
+    relationships: project.relationships
+  };
+}
+
+function projectOutputNode(output: ProjectOutput): KnowledgeNode {
+  return {
+    id: output.id,
+    title: output.title,
+    summary: output.summary,
+    collection: "project-outputs",
+    route: `/related/${encodeURIComponent(output.id)}`,
+    attributes: {
+      ...(output.attributes ?? {}),
+      project: output.project
+    },
+    relationships: output.relationships
+  };
+}
+
 export function getKnowledgeRegistry(): KnowledgeNode[] {
   const entries = getEntries();
   const sources = getSources();
+  const projects = getProjects();
+  const projectOutputs = getProjectOutputs();
   const nodes = [
     ...entries.map(entryNode),
     ...sources.map(sourceNode),
+    ...projects.map(projectNode),
+    ...projectOutputs.map(projectOutputNode),
     ...getDocumentNodes(entries, sources)
   ];
   const unique = new Map<string, KnowledgeNode>();

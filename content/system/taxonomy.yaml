@@ -219,6 +219,66 @@ dimensions:
         color: "#dc2626"
         order: 40
 
+  - id: projectStatus
+    label: Project Status
+    cardinality: one
+    options:
+      - value: planned
+        label: Planned
+        icon: calendar-clock
+        color: "#64748b"
+        order: 10
+      - value: active
+        label: Active
+        icon: circle-play
+        color: "#2563eb"
+        order: 20
+      - value: blocked
+        label: Blocked
+        icon: circle-alert
+        color: "#dc2626"
+        order: 30
+      - value: completed
+        label: Completed
+        icon: circle-check
+        color: "#16a34a"
+        order: 40
+
+  - id: projectStage
+    label: Project Stage
+    cardinality: one
+    options:
+      - value: discovery
+        label: Discovery
+        icon: search
+        color: "#0284c7"
+        order: 10
+      - value: assessment
+        label: Assessment
+        icon: clipboard-check
+        color: "#4f46e5"
+        order: 20
+      - value: architecture
+        label: Architecture
+        icon: landmark
+        color: "#9333ea"
+        order: 30
+      - value: implementation
+        label: Implementation
+        icon: hammer
+        color: "#ea580c"
+        order: 40
+      - value: testing
+        label: Testing
+        icon: flask-conical
+        color: "#059669"
+        order: 50
+      - value: readiness
+        label: Readiness
+        icon: badge-check
+        color: "#16a34a"
+        order: 60
+
   - id: artifactKind
     label: Artifact Kind
     cardinality: one
