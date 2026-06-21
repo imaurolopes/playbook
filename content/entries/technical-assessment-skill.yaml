@@ -1,0 +1,67 @@
+schemaVersion: "1"
+id: technical-assessment-skill
+schema: operational-skill
+title: Technical Assessment
+summary: Assess systems, dependencies, constraints, ownership, operability, and delivery conditions.
+route: /knowledge/technical-assessment-skill
+attributes:
+  categories:
+    - skills
+    - technical-assessment
+    - architecture
+    - integration
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - landscape
+    - constraints
+    - dependencies
+objective: Build a decision-ready understanding of the current technical landscape and material constraints.
+whenToUse:
+  - Before architecture or migration decisions
+  - When dependencies and ownership boundaries are uncertain
+requiredInputs:
+  - id: system-inventory
+    label: Known systems and interfaces
+  - id: operating-context
+    label: Operational and delivery context
+questions:
+  - id: boundaries
+    prompt: Which systems and ownership boundaries are in scope?
+  - id: constraints
+    prompt: Which constraints are fixed, negotiable, or assumed?
+  - id: failure
+    prompt: Where can failure propagate?
+decisionRules:
+  - id: unknown-dependency
+    when: A critical dependency has no owner or contract
+    then: Treat it as a delivery risk and require investigation
+expectedOutputs:
+  - id: landscape
+    label: Technical landscape
+  - id: constraint-register
+    label: Constraint and dependency register
+guidance:
+  - Describe current reality before proposing target architecture.
+  - Capture evidence and confidence for each material constraint.
+risks:
+  - id: hidden-coupling
+    label: Hidden coupling invalidates delivery assumptions
+    severity: high
+checklist:
+  - id: dependencies-owned
+    label: Critical dependencies have owners
+  - id: constraints-classified
+    label: Constraints are classified by flexibility
+references:
+  - target: technical-landscape
+    label: Technical landscape template
+relationships:
+  - type: consumes
+    target: technical-landscape
+  - type: informs
+    target: architecture-direction
+  - type: supports
+    target: data-flow-design
+

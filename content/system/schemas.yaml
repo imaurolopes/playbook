@@ -25,6 +25,199 @@ schemas:
         type: list
         itemSchema: document-reference
 
+  - id: operational-skill
+    label: Operational skill
+    storage: entries
+    extends: reusable-entry
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - attributes
+      - objective
+      - expectedOutputs
+    constraints:
+      attributes.artifactKind:
+        equals: skill
+    fields:
+      objective:
+        type: string
+      whenToUse:
+        type: list
+      requiredInputs:
+        type: list
+        itemSchema: open-item
+      questions:
+        type: list
+        itemSchema: open-item
+      decisionRules:
+        type: list
+        itemSchema: open-item
+      expectedOutputs:
+        type: list
+        itemSchema: open-item
+      guidance:
+        type: list
+        itemSchema: open-item
+      risks:
+        type: list
+        itemSchema: open-item
+      checklist:
+        type: list
+        itemSchema: open-item
+      references:
+        type: list
+        itemSchema: node-reference
+      relationships:
+        type: list
+        itemSchema: relationship
+
+  - id: operational-template
+    label: Operational template
+    storage: entries
+    extends: reusable-entry
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - attributes
+      - purpose
+      - sections
+    constraints:
+      attributes.artifactKind:
+        equals: template
+    fields:
+      purpose:
+        type: string
+      requiredInputs:
+        type: list
+        itemSchema: open-item
+      sections:
+        type: list
+        itemSchema: artifact-section
+      completionCriteria:
+        type: list
+        itemSchema: open-item
+      references:
+        type: list
+        itemSchema: node-reference
+      relationships:
+        type: list
+        itemSchema: relationship
+
+  - id: operational-checklist
+    label: Operational checklist
+    storage: entries
+    extends: reusable-entry
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - attributes
+      - purpose
+      - items
+    constraints:
+      attributes.artifactKind:
+        equals: checklist
+    fields:
+      purpose:
+        type: string
+      prerequisites:
+        type: list
+        itemSchema: open-item
+      items:
+        type: list
+        itemSchema: checklist-item
+      evidenceRequirements:
+        type: list
+        itemSchema: open-item
+      references:
+        type: list
+        itemSchema: node-reference
+      relationships:
+        type: list
+        itemSchema: relationship
+
+  - id: operational-guideline
+    label: Operational guideline
+    storage: entries
+    extends: reusable-entry
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - attributes
+      - purpose
+      - principles
+    constraints:
+      attributes.artifactKind:
+        equals: guideline
+    fields:
+      purpose:
+        type: string
+      principles:
+        type: list
+        itemSchema: open-item
+      recommendations:
+        type: list
+        itemSchema: open-item
+      antiPatterns:
+        type: list
+        itemSchema: open-item
+      examples:
+        type: list
+        itemSchema: open-item
+      references:
+        type: list
+        itemSchema: node-reference
+      relationships:
+        type: list
+        itemSchema: relationship
+
+  - id: operational-decision-matrix
+    label: Operational decision matrix
+    storage: entries
+    extends: reusable-entry
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+      - attributes
+      - decision
+      - options
+      - criteria
+    constraints:
+      attributes.artifactKind:
+        equals: decision-matrix
+    fields:
+      decision:
+        type: string
+      options:
+        type: list
+        itemSchema: matrix-option
+      criteria:
+        type: list
+        itemSchema: matrix-criterion
+      rules:
+        type: list
+        itemSchema: open-item
+      references:
+        type: list
+        itemSchema: node-reference
+      relationships:
+        type: list
+        itemSchema: relationship
+
   - id: project-output
     label: Project-specific output
     storage: projects
@@ -77,6 +270,43 @@ schemas:
         itemSchema: supporting-material
 
 definitions:
+  open-item:
+    open: true
+
+  node-reference:
+    required:
+      - target
+    open: true
+    fields:
+      target:
+        type: string
+      label:
+        type: string
+
+  artifact-section:
+    required:
+      - id
+      - label
+    open: true
+
+  checklist-item:
+    required:
+      - id
+      - label
+    open: true
+
+  matrix-option:
+    required:
+      - id
+      - label
+    open: true
+
+  matrix-criterion:
+    required:
+      - id
+      - label
+    open: true
+
   relationship:
     required:
       - type

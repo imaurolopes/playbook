@@ -1,0 +1,42 @@
+schemaVersion: "1"
+id: discovery-facilitation-guideline
+schema: operational-guideline
+title: Discovery Facilitation Guideline
+summary: Practical guidance for facilitating evidence-led discovery without prematurely converging on solutions.
+route: /knowledge/discovery-facilitation-guideline
+attributes:
+  categories:
+    - discovery
+    - skills
+    - governance
+  level: asset
+  lifecycle: review
+  artifactKind: guideline
+  tags:
+    - facilitation
+    - evidence
+    - participation
+purpose: Help facilitators create shared understanding, surface uncertainty, and preserve decision quality.
+principles:
+  - Start with desired change and evidence before solution ideas.
+  - Make participation, assumptions, and disagreement visible.
+  - Treat unanswered questions as managed work, not meeting failure.
+recommendations:
+  - Use neutral prompts and ask for concrete examples.
+  - Separate facts, interpretations, assumptions, constraints, and decisions.
+  - Close each session with owners and evidence-gathering actions.
+antiPatterns:
+  - Allowing the loudest participant to define the problem
+  - Turning discovery into feature estimation
+  - Recording consensus without recording uncertainty
+examples:
+  - Replace "Which platform should we use?" with "Which outcome and constraints require a platform decision?"
+references:
+  - target: document-discovery-starter-guide
+    label: Discovery starter guide
+relationships:
+  - type: supports
+    target: discovery-facilitation
+  - type: derived-from
+    target: outcome-discovery
+

@@ -253,6 +253,11 @@ dimensions:
         icon: book-open
         color: "#2563eb"
         order: 60
+      - value: guideline
+        label: Guideline
+        icon: compass
+        color: "#0f766e"
+        order: 65
       - value: template
         label: Template
         icon: copy

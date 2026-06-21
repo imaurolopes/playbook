@@ -1,0 +1,51 @@
+schemaVersion: "1"
+id: discovery-report-template
+schema: operational-template
+title: Discovery Report Template
+summary: A reusable structure for documenting discovery context, evidence, outcomes, assumptions, and open questions.
+route: /knowledge/discovery-report-template
+attributes:
+  categories:
+    - discovery
+    - requirements
+    - skills
+  level: asset
+  lifecycle: review
+  artifactKind: template
+  tags:
+    - report
+    - evidence
+    - outcomes
+purpose: Create a reviewable discovery record that separates evidence from assumptions and makes next decisions explicit.
+requiredInputs:
+  - id: initiative-context
+    label: Initiative context and stakeholders
+  - id: evidence
+    label: Observations, data, and interview evidence
+sections:
+  - id: context
+    label: Context and scope
+    required: true
+  - id: outcomes
+    label: Desired outcomes and measures
+    required: true
+  - id: evidence
+    label: Evidence and observations
+    required: true
+  - id: assumptions
+    label: Assumptions, constraints, and unknowns
+  - id: next-decisions
+    label: Required decisions and next actions
+completionCriteria:
+  - Outcomes are measurable and owned.
+  - Material claims link to evidence.
+  - Unknowns and next actions have owners.
+references:
+  - target: document-discovery-starter-guide
+    label: Discovery starter guide
+relationships:
+  - type: supports
+    target: discovery-facilitation
+  - type: derived-from
+    target: outcome-discovery
+

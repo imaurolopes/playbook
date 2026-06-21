@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { LocalView } from "@/components/home/local-view";
 import { NodeViewRenderer } from "@/components/views/node-view-renderer";
 import { EntryRenderer } from "@/components/renderers/entry-renderer";
+import { SkillRenderer } from "@/components/skills/skill-renderer";
+import { ArtifactRenderer } from "@/components/artifacts/artifact-renderer";
 import { RelatedView } from "@/components/relationships/related-view";
 import {
   getEntries,
@@ -119,7 +121,23 @@ export default async function EntryPage({ params }: PageProps) {
         layouts={views.viewEngine.layouts}
         breadcrumbs={views.viewEngine.breadcrumbs}
         detailContent={
-          <EntryRenderer entry={entry} sections={layout.detailSections} />
+          layout.layout === "skill" ? (
+            <SkillRenderer
+              entry={entry}
+              registry={registry}
+              taxonomy={taxonomy}
+              sections={layout.detailSections}
+            />
+          ) : layout.layout === "artifact" ? (
+            <ArtifactRenderer
+              entry={entry}
+              registry={registry}
+              taxonomy={taxonomy}
+              sections={layout.detailSections}
+            />
+          ) : (
+            <EntryRenderer entry={entry} sections={layout.detailSections} />
+          )
         }
       />
     ) : null;

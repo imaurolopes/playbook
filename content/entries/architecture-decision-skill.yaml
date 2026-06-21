@@ -1,0 +1,70 @@
+schemaVersion: "1"
+id: architecture-decision-skill
+schema: operational-skill
+title: Architecture Decision
+summary: Frame, evaluate, decide, and document consequential architecture choices.
+route: /knowledge/architecture-decision-skill
+attributes:
+  categories:
+    - skills
+    - architecture
+    - governance
+    - reliability
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - trade-offs
+    - decisions
+    - evidence
+objective: Produce a durable decision with explicit context, alternatives, trade-offs, and consequences.
+whenToUse:
+  - When a choice affects multiple teams or quality attributes
+  - When reversal cost or uncertainty is material
+requiredInputs:
+  - id: decision-context
+    label: Decision context and drivers
+  - id: alternatives
+    label: Credible alternatives
+questions:
+  - id: drivers
+    prompt: Which quality drivers and constraints dominate the decision?
+  - id: reversibility
+    prompt: How reversible is each alternative?
+  - id: evidence
+    prompt: What evidence distinguishes the alternatives?
+decisionRules:
+  - id: no-material-difference
+    when: Alternatives have no material consequence
+    then: Avoid creating a durable architecture decision record
+expectedOutputs:
+  - id: decision-record
+    label: Architecture decision record
+  - id: follow-up
+    label: Consequence and validation actions
+guidance:
+  - Record why rejected alternatives were unsuitable.
+  - Timebox evidence gathering according to reversal cost.
+risks:
+  - id: false-certainty
+    label: Uncertainty is hidden behind a definitive decision
+    severity: medium
+checklist:
+  - id: alternatives-compared
+    label: Credible alternatives were compared
+  - id: consequences-owned
+    label: Consequences and follow-up actions have owners
+references:
+  - target: static-delivery-decision
+    label: Example decision record
+relationships:
+  - type: derived-from
+    target: discussion-architecture-boundaries
+  - type: consumes
+    target: architecture-direction
+  - type: produces
+    target: static-delivery-decision
+  - type: produces
+    target: architecture-assessment-template
+  - type: validates
+    target: architecture-review-checklist

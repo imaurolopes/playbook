@@ -125,7 +125,9 @@ const supportedLayouts = new Set([
   "detail",
   "timeline",
   "table",
-  "graph-placeholder"
+  "graph-placeholder",
+  "skill",
+  "artifact"
 ]);
 const configuredLayouts = new Set(Object.keys(engine?.layouts ?? {}));
 
@@ -265,6 +267,40 @@ for (const [level, settings] of Object.entries(
   }
   validateLayoutReference(`viewEngine.defaults.level.${level}`, settings);
   validatePanels(`viewEngine.defaults.level.${level}`, settings);
+}
+
+const artifactKindDimensionId = engine?.selectors?.artifactKindAttribute;
+const artifactKindDimension = artifactKindDimensionId
+  ? dimensions.get(artifactKindDimensionId)
+  : undefined;
+if (artifactKindDimensionId && !artifactKindDimension) {
+  errors.push(
+    `${relative(viewsPath)}: viewEngine.selectors.artifactKindAttribute references unknown taxonomy dimension "${artifactKindDimensionId}"`
+  );
+}
+
+for (const [artifactKind, settings] of Object.entries(
+  engine?.defaults?.artifactKind ?? {}
+)) {
+  if (
+    artifactKindDimension &&
+    !artifactKindDimension.values.has(artifactKind)
+  ) {
+    report(
+      viewsPath,
+      `viewEngine.defaults.artifactKind.${artifactKind}`,
+      artifactKind,
+      artifactKindDimensionId
+    );
+  }
+  validateLayoutReference(
+    `viewEngine.defaults.artifactKind.${artifactKind}`,
+    settings
+  );
+  validatePanels(
+    `viewEngine.defaults.artifactKind.${artifactKind}`,
+    settings
+  );
 }
 
 const categoryDimensionId = engine?.selectors?.categoryAttribute;

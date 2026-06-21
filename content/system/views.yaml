@@ -5,6 +5,7 @@ viewEngine:
   selectors:
     levelAttribute: level
     categoryAttribute: categories
+    artifactKindAttribute: artifactKind
 
   selector:
     enabled: false
@@ -69,6 +70,62 @@ viewEngine:
         enabledPanels:
           - detail
           - relationshipGraph
+    artifactKind:
+      skill:
+        layout: skill
+        selectorEnabled: false
+        detailSections:
+          - overview
+          - inputs
+          - questions
+          - decisionRules
+          - outputs
+          - guidance
+          - risks
+          - checklist
+          - references
+          - relationships
+      template:
+        layout: artifact
+        selectorEnabled: false
+        detailSections:
+          - overview
+          - inputs
+          - sections
+          - completionCriteria
+          - references
+          - relationships
+      checklist:
+        layout: artifact
+        selectorEnabled: false
+        detailSections:
+          - overview
+          - prerequisites
+          - items
+          - evidenceRequirements
+          - references
+          - relationships
+      guideline:
+        layout: artifact
+        selectorEnabled: false
+        detailSections:
+          - overview
+          - principles
+          - recommendations
+          - antiPatterns
+          - examples
+          - references
+          - relationships
+      decision-matrix:
+        layout: artifact
+        selectorEnabled: false
+        detailSections:
+          - overview
+          - options
+          - criteria
+          - rules
+          - references
+          - relationships
 
   overrides:
     categories:
@@ -100,6 +157,12 @@ viewEngine:
       groupBy: attributes.lifecycle
     detail:
       label: Detail
+      enabled: true
+    skill:
+      label: Skill
+      enabled: true
+    artifact:
+      label: Artifact
       enabled: true
     timeline:
       label: Timeline

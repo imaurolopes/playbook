@@ -1,0 +1,52 @@
+schemaVersion: "1"
+id: data-contract-template
+schema: operational-template
+title: Data Contract Template
+summary: A reusable contract structure for data ownership, semantics, quality, compatibility, and operational expectations.
+route: /knowledge/data-contract-template
+attributes:
+  categories:
+    - integration
+    - processing
+    - storage
+    - quality
+  level: asset
+  lifecycle: draft
+  artifactKind: template
+  tags:
+    - contracts
+    - schemas
+    - ownership
+purpose: Make data exchange expectations explicit and reviewable across producer and consumer boundaries.
+requiredInputs:
+  - id: producer-consumer
+    label: Producer and consumer ownership
+  - id: data-flow
+    label: Data flow and usage context
+sections:
+  - id: identity
+    label: Contract identity and owners
+    required: true
+  - id: semantics
+    label: Fields, semantics, and classifications
+    required: true
+  - id: quality
+    label: Quality rules and service expectations
+  - id: compatibility
+    label: Compatibility and evolution policy
+    required: true
+  - id: operations
+    label: Monitoring, incidents, and remediation
+completionCriteria:
+  - Producer and consumer owners approve the contract.
+  - Compatibility and quality expectations are testable.
+  - Operational escalation paths are defined.
+references:
+  - target: data-flow-design
+    label: Data flow design
+relationships:
+  - type: supports
+    target: data-quality-strategy-skill
+  - type: depends-on
+    target: data-flow-design
+

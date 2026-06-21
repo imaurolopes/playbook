@@ -1,0 +1,51 @@
+schemaVersion: "1"
+id: architecture-assessment-template
+schema: operational-template
+title: Architecture Assessment Template
+summary: A reusable structure for documenting architecture context, drivers, constraints, risks, and recommendations.
+route: /knowledge/architecture-assessment-template
+attributes:
+  categories:
+    - architecture
+    - technical-assessment
+    - governance
+  level: asset
+  lifecycle: review
+  artifactKind: template
+  tags:
+    - assessment
+    - quality-attributes
+    - recommendations
+purpose: Produce a consistent architecture assessment that connects recommendations to evidence and quality drivers.
+requiredInputs:
+  - id: technical-landscape
+    label: Technical landscape and boundaries
+  - id: quality-drivers
+    label: Quality attributes and decision drivers
+sections:
+  - id: scope
+    label: Scope and architecture context
+    required: true
+  - id: drivers
+    label: Drivers and constraints
+    required: true
+  - id: current-state
+    label: Current-state observations
+  - id: risks
+    label: Risks and consequences
+    required: true
+  - id: recommendations
+    label: Recommendations and decisions
+completionCriteria:
+  - Recommendations trace to drivers and evidence.
+  - Material risks have owners and dispositions.
+  - Uncertainty and confidence are explicit.
+references:
+  - target: architecture-direction
+    label: Architecture direction
+relationships:
+  - type: supports
+    target: architecture-decision-skill
+  - type: depends-on
+    target: technical-landscape
+

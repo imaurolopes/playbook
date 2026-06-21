@@ -120,7 +120,9 @@ export function NodeViewRenderer({
         data-layout={selection.layout.layout}
         data-view-source={selection.layout.source}
       >
-        {selection.layout.layout === "detail" ? (
+        {selection.layout.layout === "detail" ||
+        selection.layout.layout === "skill" ||
+        selection.layout.layout === "artifact" ? (
           detailContent
         ) : (
           <ViewLayout

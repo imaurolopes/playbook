@@ -1,0 +1,69 @@
+schemaVersion: "1"
+id: data-quality-strategy-skill
+schema: operational-skill
+title: Data Quality Strategy
+summary: Define quality expectations, controls, evidence, ownership, and remediation across data flows.
+route: /knowledge/data-quality-strategy-skill
+attributes:
+  categories:
+    - skills
+    - quality
+    - processing
+    - storage
+    - observability
+  level: level-1
+  lifecycle: draft
+  artifactKind: skill
+  tags:
+    - data-quality
+    - controls
+    - ownership
+objective: Create a risk-aligned strategy for measuring, preventing, detecting, and correcting data quality failures.
+whenToUse:
+  - When data supports material operational or analytical decisions
+  - Before introducing new transformations or integrations
+requiredInputs:
+  - id: data-flow
+    label: Data flow and ownership context
+  - id: consumers
+    label: Consumer expectations and failure impact
+questions:
+  - id: dimensions
+    prompt: Which quality dimensions matter for each consumer?
+  - id: controls
+    prompt: Where should preventive and detective controls run?
+  - id: remediation
+    prompt: Who owns correction and communication?
+decisionRules:
+  - id: control-placement
+    when: A defect can be prevented at the authoritative boundary
+    then: Prefer prevention over downstream detection
+expectedOutputs:
+  - id: quality-strategy
+    label: Data quality strategy
+  - id: control-matrix
+    label: Quality control and ownership matrix
+guidance:
+  - Tie thresholds to consumer impact.
+  - Preserve lineage from control evidence to source data.
+risks:
+  - id: metric-without-action
+    label: Quality metrics exist without remediation ownership
+    severity: high
+checklist:
+  - id: owners-defined
+    label: Each control and remediation path has an owner
+  - id: thresholds-justified
+    label: Thresholds are justified by consumer impact
+references:
+  - target: data-flow-design
+    label: Data flow design
+relationships:
+  - type: depends-on
+    target: data-flow-design
+  - type: supports
+    target: operational-signals
+  - type: validates
+    target: delivery-readiness-checklist
+  - type: produces
+    target: data-contract-template

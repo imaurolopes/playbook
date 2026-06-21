@@ -27,6 +27,8 @@ relationships:
     target: verification-strategy
   - type: informs
     target: delivery-readiness-checklist
+  - type: informs
+    target: testing-strategy-skill
 content:
   - kind: finding
     title: Evidence quality

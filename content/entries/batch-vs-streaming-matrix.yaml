@@ -1,0 +1,52 @@
+schemaVersion: "1"
+id: batch-vs-streaming-matrix
+schema: operational-decision-matrix
+title: Batch vs Streaming
+summary: A decision matrix for selecting batch or streaming processing based on latency, correctness, and operability.
+route: /knowledge/batch-vs-streaming-matrix
+attributes:
+  categories:
+    - processing
+    - architecture
+    - integration
+    - reliability
+  level: asset
+  lifecycle: review
+  artifactKind: decision-matrix
+  tags:
+    - batch
+    - streaming
+    - latency
+decision: Choose the processing model that meets business latency and correctness needs with proportionate complexity.
+options:
+  - id: batch
+    label: Batch processing
+    strengths:
+      - Simpler replay and reconciliation
+      - Efficient bounded processing
+  - id: streaming
+    label: Streaming processing
+    strengths:
+      - Low-latency event response
+      - Continuous state updates
+criteria:
+  - id: latency
+    label: Required decision latency
+  - id: event-order
+    label: Ordering and late-arrival behavior
+  - id: replay
+    label: Replay and correction requirements
+  - id: operations
+    label: Operational maturity and cost
+rules:
+  - Prefer batch when latency tolerance permits simpler bounded execution.
+  - Prefer streaming only when continuous processing produces material value.
+references:
+  - target: operational-signals
+    label: Operational signals
+relationships:
+  - type: informs
+    target: architecture-decision-skill
+  - type: informs
+    target: technical-assessment-skill
+

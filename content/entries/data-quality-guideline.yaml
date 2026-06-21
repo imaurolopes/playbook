@@ -1,0 +1,43 @@
+schemaVersion: "1"
+id: data-quality-guideline
+schema: operational-guideline
+title: Data Quality Guideline
+summary: Practical guidance for defining quality expectations and controls around consumer impact and ownership.
+route: /knowledge/data-quality-guideline
+attributes:
+  categories:
+    - quality
+    - processing
+    - storage
+    - observability
+  level: asset
+  lifecycle: review
+  artifactKind: guideline
+  tags:
+    - data-quality
+    - controls
+    - remediation
+purpose: Establish consistent principles for preventing, detecting, and correcting material data quality failures.
+principles:
+  - Define quality relative to consumer decisions and operational impact.
+  - Place controls as close as practical to authoritative boundaries.
+  - Every signal requires an owner and remediation path.
+recommendations:
+  - Define measurable thresholds with justified tolerances.
+  - Preserve lineage between source data, transformations, and controls.
+  - Review recurring defects for systemic causes.
+antiPatterns:
+  - Universal quality scores without consumer context
+  - Monitoring defects without assigning remediation ownership
+  - Repairing downstream data while leaving upstream causes intact
+examples:
+  - Use different freshness thresholds for operational routing and monthly reporting.
+references:
+  - target: data-contract-template
+    label: Data contract template
+relationships:
+  - type: supports
+    target: data-quality-strategy-skill
+  - type: informs
+    target: data-contract-template
+

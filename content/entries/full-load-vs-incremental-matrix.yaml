@@ -1,0 +1,55 @@
+schemaVersion: "1"
+id: full-load-vs-incremental-matrix
+schema: operational-decision-matrix
+title: Full Load vs Incremental
+summary: A decision matrix for choosing full reload or incremental data movement and processing.
+route: /knowledge/full-load-vs-incremental-matrix
+attributes:
+  categories:
+    - processing
+    - storage
+    - integration
+    - reliability
+  level: asset
+  lifecycle: review
+  artifactKind: decision-matrix
+  tags:
+    - full-load
+    - incremental
+    - reconciliation
+decision: Choose a loading strategy that balances simplicity, freshness, correctness, and operational cost.
+options:
+  - id: full-load
+    label: Full load
+    strengths:
+      - Simple correctness model
+      - Natural reconciliation
+    constraints:
+      - Reprocesses unchanged data
+  - id: incremental
+    label: Incremental load
+    strengths:
+      - Lower recurring compute and transfer
+      - Better freshness at scale
+    constraints:
+      - Requires reliable change detection and recovery
+criteria:
+  - id: volume
+    label: Dataset size and change rate
+  - id: freshness
+    label: Freshness requirement
+  - id: change-capture
+    label: Change-capture reliability
+  - id: reconciliation
+    label: Reconciliation and repair complexity
+rules:
+  - Prefer full loads while scale permits and simplicity materially reduces risk.
+  - Prefer incremental loads when recurring full processing exceeds operational boundaries.
+references:
+  - target: data-contract-template
+    label: Data contract template
+relationships:
+  - type: informs
+    target: data-quality-strategy-skill
+  - type: supports
+    target: technical-assessment-skill

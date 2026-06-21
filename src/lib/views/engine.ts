@@ -10,6 +10,7 @@ export interface ViewResolutionContext {
   nodeId?: string;
   level?: string;
   categories?: string[];
+  artifactKind?: string;
   attributes?: Record<string, MetadataValue>;
   settings?: Partial<ViewLayoutSettings>;
 }
@@ -39,6 +40,16 @@ function contextCategories(
   return attribute ? stringValues(context.attributes?.[attribute]) : [];
 }
 
+function contextArtifactKind(
+  engine: ViewEngineDefinition,
+  context: ViewResolutionContext
+) {
+  if (context.artifactKind) return context.artifactKind;
+  const attribute = engine.selectors?.artifactKindAttribute;
+  if (!attribute) return undefined;
+  return stringValues(context.attributes?.[attribute])[0];
+}
+
 function enabledLayout(
   engine: ViewEngineDefinition,
   settings: ViewLayoutSettings
@@ -64,7 +75,11 @@ export function resolveViewLayout(
   const engine = views.viewEngine;
   const level = contextLevel(engine, context);
   const categories = contextCategories(engine, context);
+  const artifactKind = contextArtifactKind(engine, context);
   const levelDefault = level ? engine.defaults?.level?.[level] : undefined;
+  const artifactDefault = artifactKind
+    ? engine.defaults?.artifactKind?.[artifactKind]
+    : undefined;
   const categoryMatch = categories
     .map((category) => ({
       category,
@@ -81,16 +96,19 @@ export function resolveViewLayout(
     ...engine.fallback,
     ...levelDefault,
     ...categoryMatch?.settings,
+    ...artifactDefault,
     ...nodeOverride,
     ...context.settings
   };
   const source: ResolvedViewLayout["source"] = nodeOverride
     ? "node"
-    : categoryMatch
-      ? "category"
-      : levelDefault
-        ? "level"
-        : "fallback";
+    : artifactDefault
+      ? "artifact"
+      : categoryMatch
+        ? "category"
+        : levelDefault
+          ? "level"
+          : "fallback";
   const resolved = withLayoutDefinition(engine, merged);
 
   if (!enabledLayout(engine, resolved)) {

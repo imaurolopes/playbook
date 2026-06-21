@@ -1,0 +1,44 @@
+schemaVersion: "1"
+id: architecture-review-checklist
+schema: operational-checklist
+title: Architecture Review Checklist
+summary: Evidence prompts for reviewing architecture drivers, boundaries, risks, decisions, and operational consequences.
+route: /knowledge/architecture-review-checklist
+attributes:
+  categories:
+    - architecture
+    - checklists
+    - governance
+    - reliability
+  level: asset
+  lifecycle: review
+  artifactKind: checklist
+  tags:
+    - review
+    - decisions
+    - evidence
+purpose: Ensure architecture reviews examine material decisions and consequences rather than presentation completeness.
+prerequisites:
+  - Architecture context and diagrams
+  - Quality drivers and material constraints
+items:
+  - id: boundaries
+    label: System, trust, and ownership boundaries are explicit
+  - id: drivers
+    label: Recommendations trace to quality drivers
+  - id: alternatives
+    label: Material alternatives and trade-offs are documented
+  - id: operations
+    label: Failure, recovery, observability, and ownership are addressed
+evidenceRequirements:
+  - Decision records for consequential choices
+  - Risk owners and follow-up actions
+references:
+  - target: architecture-assessment-template
+    label: Architecture assessment template
+relationships:
+  - type: validates
+    target: architecture-decision-skill
+  - type: supports
+    target: delivery-governance
+

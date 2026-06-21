@@ -1,0 +1,44 @@
+schemaVersion: "1"
+id: discovery-readiness-checklist
+schema: operational-checklist
+title: Discovery Readiness Checklist
+summary: Evidence prompts for determining whether discovery has enough context, access, and ownership to begin.
+route: /knowledge/discovery-readiness-checklist
+attributes:
+  categories:
+    - discovery
+    - checklists
+    - governance
+  level: asset
+  lifecycle: review
+  artifactKind: checklist
+  tags:
+    - readiness
+    - stakeholders
+    - evidence
+purpose: Confirm that discovery can proceed productively without hiding foundational gaps.
+prerequisites:
+  - A named initiative sponsor or outcome owner
+  - A facilitator and initial participant list
+items:
+  - id: outcome-context
+    label: The desired change is stated without prescribing a solution
+  - id: stakeholder-access
+    label: Affected stakeholders and subject-matter experts are accessible
+  - id: evidence-access
+    label: Existing evidence and relevant data can be reviewed
+  - id: constraints-visible
+    label: Known time, policy, and technical constraints are visible
+evidenceRequirements:
+  - Initiative brief or equivalent context
+  - Named owners and participant list
+  - Evidence sources or an explicit evidence-gathering plan
+references:
+  - target: discovery-facilitation
+    label: Discovery facilitation skill
+relationships:
+  - type: validates
+    target: discovery-facilitation
+  - type: supports
+    target: discovery-starter
+

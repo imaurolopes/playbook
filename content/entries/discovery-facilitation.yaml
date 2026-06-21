@@ -1,0 +1,74 @@
+schemaVersion: "1"
+id: discovery-facilitation
+schema: operational-skill
+title: Discovery Facilitation
+summary: Facilitate structured exploration of outcomes, actors, evidence, constraints, and unknowns.
+route: /knowledge/discovery-facilitation
+attributes:
+  categories:
+    - skills
+    - discovery
+    - requirements
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - facilitation
+    - outcomes
+    - evidence
+objective: Establish shared understanding before committing to requirements or solutions.
+whenToUse:
+  - At the beginning of an initiative
+  - When stakeholders disagree about the problem
+  - When assumptions need owners and evidence
+requiredInputs:
+  - id: initiative-context
+    label: Initial initiative context
+    required: true
+  - id: stakeholder-access
+    label: Access to affected stakeholders
+    required: true
+questions:
+  - id: desired-change
+    prompt: What measurable outcome should change?
+  - id: affected-actors
+    prompt: Who experiences the problem and who owns the outcome?
+  - id: evidence
+    prompt: Which facts support the current problem statement?
+decisionRules:
+  - id: insufficient-evidence
+    when: Critical assumptions lack supporting evidence
+    then: Record them as discovery risks and defer solution commitment
+expectedOutputs:
+  - id: discovery-summary
+    label: Discovery summary
+  - id: evidence-backlog
+    label: Prioritized evidence and open-question backlog
+guidance:
+  - Start with outcomes before discussing solutions.
+  - Separate observations, assumptions, constraints, and decisions.
+risks:
+  - id: premature-solution
+    label: Premature solution commitment
+    severity: high
+checklist:
+  - id: outcomes-defined
+    label: Outcomes are measurable
+  - id: unknowns-owned
+    label: Important unknowns have owners
+references:
+  - target: document-discovery-starter-guide
+    label: Discovery starter guide
+relationships:
+  - type: derived-from
+    target: note-metadata-model-thoughts
+  - type: supports
+    target: discovery-starter
+  - type: consumes
+    target: outcome-discovery
+  - type: produces
+    target: discovery-report-template
+  - type: validates
+    target: discovery-readiness-checklist
+  - type: related-to
+    target: document-discovery-starter-guide

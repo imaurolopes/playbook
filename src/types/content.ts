@@ -39,6 +39,30 @@ export interface Entry {
   content?: ContentBlock[];
   documents?: DocumentReference[];
   actions?: EntryAction[];
+  objective?: string;
+  whenToUse?: MetadataValue[];
+  requiredInputs?: MetadataValue[];
+  questions?: MetadataValue[];
+  decisionRules?: MetadataValue[];
+  expectedOutputs?: MetadataValue[];
+  guidance?: MetadataValue[];
+  risks?: MetadataValue[];
+  checklist?: MetadataValue[];
+  references?: MetadataValue[];
+  purpose?: string;
+  sections?: MetadataValue[];
+  completionCriteria?: MetadataValue[];
+  prerequisites?: MetadataValue[];
+  items?: MetadataValue[];
+  evidenceRequirements?: MetadataValue[];
+  principles?: MetadataValue[];
+  recommendations?: MetadataValue[];
+  antiPatterns?: MetadataValue[];
+  examples?: MetadataValue[];
+  decision?: string;
+  options?: MetadataValue[];
+  criteria?: MetadataValue[];
+  rules?: MetadataValue[];
 }
 
 export interface NavigationNode {
@@ -155,7 +179,7 @@ export interface ViewLayoutSettings {
 }
 
 export interface ResolvedViewLayout extends ViewLayoutSettings {
-  source: "node" | "category" | "level" | "fallback";
+  source: "node" | "category" | "artifact" | "level" | "fallback";
   matchedCategory?: string;
   level?: string;
 }
@@ -185,6 +209,7 @@ export interface ViewEngineDefinition {
   selectors?: {
     levelAttribute?: string;
     categoryAttribute?: string;
+    artifactKindAttribute?: string;
   };
   fallback: ViewLayoutSettings;
   defaults?: {

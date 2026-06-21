@@ -1,0 +1,70 @@
+schemaVersion: "1"
+id: testing-strategy-skill
+schema: operational-skill
+title: Testing Strategy
+summary: Design risk-driven verification across test layers, environments, evidence, ownership, and release decisions.
+route: /knowledge/testing-strategy-skill
+attributes:
+  categories:
+    - skills
+    - testing
+    - quality
+    - reliability
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - risk
+    - verification
+    - evidence
+objective: Produce a testing strategy that allocates verification effort according to material risk.
+whenToUse:
+  - During solution design and delivery planning
+  - When release confidence or test ownership is unclear
+requiredInputs:
+  - id: material-risks
+    label: Material product and operational risks
+  - id: delivery-context
+    label: Environments, constraints, and release process
+questions:
+  - id: failures
+    prompt: Which failures would be most costly or difficult to detect?
+  - id: layers
+    prompt: Which test layer provides the fastest reliable evidence?
+  - id: release
+    prompt: Which evidence is required for release decisions?
+decisionRules:
+  - id: expensive-late-test
+    when: A risk can be verified reliably at a faster lower layer
+    then: Prefer the lower-layer test and reserve end-to-end coverage for boundary confidence
+expectedOutputs:
+  - id: testing-strategy
+    label: Testing strategy
+  - id: evidence-map
+    label: Risk-to-evidence map
+guidance:
+  - Optimize for confidence and feedback speed, not test count.
+  - Assign ownership for maintaining each evidence source.
+risks:
+  - id: brittle-automation
+    label: High-maintenance automation obscures meaningful failures
+    severity: medium
+checklist:
+  - id: risks-mapped
+    label: Material risks map to verification evidence
+  - id: environments-addressed
+    label: Environment differences and test data are addressed
+references:
+  - target: verification-strategy
+    label: Verification strategy guide
+relationships:
+  - type: derived-from
+    target: evaluation-test-evidence
+  - type: consumes
+    target: verification-strategy
+  - type: validates
+    target: delivery-readiness-checklist
+  - type: validates
+    target: production-readiness-checklist
+  - type: related-to
+    target: document-checklists-delivery-readiness

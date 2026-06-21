@@ -1,0 +1,49 @@
+schemaVersion: "1"
+id: production-readiness-checklist
+schema: operational-checklist
+title: Production Readiness Checklist
+summary: Evidence prompts for verifying operational ownership, reliability, security, observability, and release readiness.
+route: /knowledge/production-readiness-checklist
+attributes:
+  categories:
+    - reliability
+    - testing
+    - security
+    - checklists
+  level: asset
+  lifecycle: review
+  artifactKind: checklist
+  tags:
+    - production
+    - release
+    - operations
+purpose: Make release readiness an evidence-based decision with explicit ownership and residual risk.
+prerequisites:
+  - Deployable release candidate
+  - Named service and incident owners
+items:
+  - id: service-objectives
+    label: Reliability objectives and capacity assumptions are documented
+  - id: observability
+    label: Operational signals and actionable alerts are verified
+  - id: recovery
+    label: Recovery, rollback, and data restoration procedures are tested
+  - id: security
+    label: Security risks, controls, and exceptions are reviewed
+  - id: release-evidence
+    label: Required test and release evidence is available
+evidenceRequirements:
+  - Operational dashboard and alert evidence
+  - Recovery or rollback exercise results
+  - Approved residual risks and exceptions
+references:
+  - target: delivery-readiness-checklist
+    label: Delivery readiness checklist
+relationships:
+  - type: validates
+    target: testing-strategy-skill
+  - type: supports
+    target: service-reliability
+  - type: depends-on
+    target: operational-signals
+

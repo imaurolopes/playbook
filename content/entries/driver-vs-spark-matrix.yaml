@@ -1,0 +1,55 @@
+schemaVersion: "1"
+id: driver-vs-spark-matrix
+schema: operational-decision-matrix
+title: Driver vs Spark
+summary: A decision matrix for choosing between driver-side processing and distributed Spark execution.
+route: /knowledge/driver-vs-spark-matrix
+attributes:
+  categories:
+    - processing
+    - architecture
+    - quality
+  level: asset
+  lifecycle: draft
+  artifactKind: decision-matrix
+  tags:
+    - spark
+    - distributed-processing
+    - trade-offs
+decision: Choose the appropriate execution model for a data-processing workload.
+options:
+  - id: driver
+    label: Driver-side processing
+    strengths:
+      - Simpler execution and debugging
+      - Lower coordination overhead
+    constraints:
+      - Limited by single-process memory and compute
+  - id: spark
+    label: Distributed Spark processing
+    strengths:
+      - Parallelism across large datasets
+      - Resilient distributed execution
+    constraints:
+      - Higher operational and shuffle complexity
+criteria:
+  - id: data-volume
+    label: Data volume and memory pressure
+  - id: parallelism
+    label: Useful parallelism
+  - id: latency
+    label: Startup and execution latency
+  - id: operability
+    label: Operational complexity
+rules:
+  - Prefer driver-side processing when data fits comfortably and distribution adds little useful parallelism.
+  - Prefer Spark when scale, resilience, or parallel transformations justify distributed overhead.
+references:
+  - target: data-flow-design
+    label: Data flow design
+relationships:
+  - type: informs
+    target: technical-assessment-skill
+  - type: supports
+    target: architecture-decision-skill
+

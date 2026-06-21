@@ -1,0 +1,68 @@
+schemaVersion: "1"
+id: business-assessment-skill
+schema: operational-skill
+title: Business Assessment
+summary: Assess value, urgency, ownership, investment boundaries, and organizational readiness.
+route: /knowledge/business-assessment-skill
+attributes:
+  categories:
+    - skills
+    - business-assessment
+    - budget
+    - governance
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - value
+    - investment
+    - ownership
+objective: Produce an evidence-based assessment of whether an initiative merits investment and attention.
+whenToUse:
+  - Before prioritization or funding decisions
+  - When value claims or ownership are unclear
+requiredInputs:
+  - id: desired-outcomes
+    label: Desired business outcomes
+    required: true
+  - id: available-evidence
+    label: Available evidence and constraints
+questions:
+  - id: value
+    prompt: What measurable value is expected and for whom?
+  - id: urgency
+    prompt: What changes if the initiative is delayed?
+  - id: owner
+    prompt: Who owns benefits realization?
+decisionRules:
+  - id: weak-ownership
+    when: No accountable benefit owner exists
+    then: Mark the initiative as not ready for commitment
+expectedOutputs:
+  - id: value-assessment
+    label: Value and confidence assessment
+  - id: investment-boundaries
+    label: Investment boundaries and decision thresholds
+guidance:
+  - Express confidence separately from potential value.
+  - Make opportunity cost visible.
+risks:
+  - id: benefit-inflation
+    label: Benefits are asserted without measurable evidence
+    severity: high
+checklist:
+  - id: owner-named
+    label: A benefit owner is named
+  - id: measures-defined
+    label: Success measures and baselines are defined
+references:
+  - target: value-assessment
+    label: Value assessment matrix
+relationships:
+  - type: informs
+    target: value-assessment
+  - type: consumes
+    target: investment-boundaries
+  - type: related-to
+    target: research-static-knowledge-delivery
+

@@ -1,0 +1,69 @@
+schemaVersion: "1"
+id: security-review-skill
+schema: operational-skill
+title: Security Review
+summary: Review threats, trust boundaries, controls, evidence, ownership, and residual risk.
+route: /knowledge/security-review-skill
+attributes:
+  categories:
+    - skills
+    - security
+    - architecture
+    - governance
+  level: level-1
+  lifecycle: review
+  artifactKind: skill
+  tags:
+    - threats
+    - controls
+    - assurance
+objective: Produce a proportionate security assessment with explicit residual risks and follow-up actions.
+whenToUse:
+  - Before exposing new trust boundaries or sensitive data
+  - When architecture or operational assumptions change
+requiredInputs:
+  - id: trust-boundaries
+    label: Trust boundaries and data classifications
+  - id: architecture-context
+    label: Architecture and deployment context
+questions:
+  - id: assets
+    prompt: Which assets and actors require protection?
+  - id: threats
+    prompt: Which credible threats cross each trust boundary?
+  - id: evidence
+    prompt: What evidence demonstrates control effectiveness?
+decisionRules:
+  - id: unacceptable-residual-risk
+    when: Residual risk exceeds the accountable owner's tolerance
+    then: Block approval or require an explicit exception
+expectedOutputs:
+  - id: review-record
+    label: Security review record
+  - id: risk-actions
+    label: Prioritized risks and remediation actions
+guidance:
+  - Review system behavior, not only component inventories.
+  - Distinguish control presence from control effectiveness.
+risks:
+  - id: checklist-compliance
+    label: Review becomes ceremonial checklist compliance
+    severity: high
+checklist:
+  - id: boundaries-reviewed
+    label: Trust boundaries and data movement were reviewed
+  - id: residual-risk-owned
+    label: Residual risks have accountable owners
+references:
+  - target: trust-boundaries
+    label: Trust boundaries entry
+relationships:
+  - type: consumes
+    target: trust-boundaries
+  - type: supports
+    target: delivery-governance
+  - type: validates
+    target: delivery-readiness-checklist
+  - type: derived-from
+    target: discussion-architecture-boundaries
+
