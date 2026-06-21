@@ -10,7 +10,7 @@ attributes:
     - processing
     - storage
     - observability
-  level: level-0
+  level: level-1
   lifecycle: review
   artifactKind: concept
   tags:

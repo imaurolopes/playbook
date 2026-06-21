@@ -9,7 +9,7 @@ attributes:
     - security
     - architecture
     - integration
-  level: level-0
+  level: level-1
   lifecycle: review
   artifactKind: guide
   tags:

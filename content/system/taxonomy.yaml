@@ -20,108 +20,144 @@ dimensions:
     options:
       - value: discovery
         label: Discovery
+        code: DISC
+        summary: Frame outcomes, context, evidence, and unknowns.
         group: assessment
         icon: search
         color: "#0284c7"
         order: 10
       - value: business-assessment
         label: Business Assessment
+        code: BIZ
+        summary: Connect initiatives to value, ownership, and urgency.
         group: assessment
         icon: chart-no-axes-combined
         color: "#4f46e5"
         order: 20
       - value: technical-assessment
         label: Technical Assessment
+        code: TECH
+        summary: Understand systems, constraints, and delivery conditions.
         group: assessment
         icon: scan-search
         color: "#7c3aed"
         order: 30
       - value: requirements
         label: Requirements
+        code: REQ
+        summary: Shape needs into traceable and testable statements.
         group: assessment
         icon: list-checks
         color: "#2563eb"
         order: 40
       - value: budget
         label: Budget
+        code: BUD
+        summary: Define investment boundaries and financial guardrails.
         group: assessment
         icon: circle-dollar-sign
         color: "#ca8a04"
         order: 50
       - value: architecture
         label: Architecture
+        code: ARCH
+        summary: Set structural direction, boundaries, and trade-offs.
         group: engineering
         icon: landmark
         color: "#9333ea"
         order: 60
       - value: security
         label: Security
+        code: SEC
+        summary: Establish trust boundaries, threats, and controls.
         group: engineering
         icon: shield-check
         color: "#dc2626"
         order: 70
       - value: governance
         label: Governance
+        code: GOV
+        summary: Make decision rights, evidence, and exceptions explicit.
         group: engineering
         icon: scale
         color: "#475569"
         order: 80
       - value: quality
         label: Quality
+        code: QUAL
+        summary: Define the characteristics and evidence of good delivery.
         group: engineering
         icon: badge-check
         color: "#16a34a"
         order: 90
       - value: reliability
         label: Reliability
+        code: REL
+        summary: Design for resilience, recovery, and operational ownership.
         group: operations
         icon: heart-pulse
         color: "#0d9488"
         order: 100
       - value: integration
         label: Integration
+        code: INT
+        summary: Connect boundaries through explicit contracts and flows.
         group: engineering
         icon: plug
         color: "#db2777"
         order: 110
       - value: processing
         label: Processing
+        code: PROC
+        summary: Transform work and data with clear execution semantics.
         group: engineering
         icon: workflow
         color: "#ea580c"
         order: 120
       - value: storage
         label: Storage
+        code: STOR
+        summary: Preserve information with intentional consistency and lifecycle.
         group: engineering
         icon: database
         color: "#0369a1"
         order: 130
       - value: observability
         label: Observability
+        code: OBS
+        summary: Make behavior understandable through meaningful signals.
         group: operations
         icon: activity
         color: "#0891b2"
         order: 140
       - value: testing
         label: Testing
+        code: TEST
+        summary: Build confidence with risk-aligned verification.
         group: operations
         icon: flask-conical
         color: "#059669"
         order: 150
       - value: skills
         label: Skills
+        code: SKL
+        summary: Develop repeatable human and agent capabilities.
         group: enablement
         icon: graduation-cap
         color: "#6366f1"
         order: 160
       - value: checklists
         label: Checklists
+        code: CHK
+        summary: Turn expectations into concise evidence prompts.
         group: enablement
         icon: clipboard-check
         color: "#65a30d"
         order: 170
       - value: agent-packages
         label: Agent Packages
+        code: AGT
+        summary: Organize bounded knowledge for future agent use.
         group: enablement
         icon: bot
         color: "#0f766e"

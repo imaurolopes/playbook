@@ -9,7 +9,7 @@ attributes:
     - business-assessment
     - budget
     - governance
-  level: level-0
+  level: level-1
   lifecycle: review
   artifactKind: decision-matrix
   tags:

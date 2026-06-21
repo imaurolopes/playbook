@@ -9,7 +9,7 @@ attributes:
     - discovery
     - business-assessment
     - requirements
-  level: level-0
+  level: level-1
   lifecycle: approved
   artifactKind: question-set
   tags:

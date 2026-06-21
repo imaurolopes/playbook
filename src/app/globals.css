@@ -50,6 +50,16 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   }
 
+  .concept-periodic-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  }
+
+  .local-periodic-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+
   .detail-heading {
     @apply mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
   }

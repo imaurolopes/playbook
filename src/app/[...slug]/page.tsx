@@ -1,7 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EntryRenderer } from "@/components/renderers/entry-renderer";
-import { getEntries, getEntryByRoute } from "@/lib/content/load";
+import { LocalView } from "@/components/home/local-view";
+import {
+  getEntries,
+  getEntryByRoute,
+  getTaxonomy,
+  getViews
+} from "@/lib/content/load";
+import {
+  filterEntriesForRoute,
+  getTaxonomyViewRoutes,
+  resolveTaxonomyViewRoute
+} from "@/lib/views/resolve";
 
 interface PageProps {
   params: Promise<{ slug: string[] }>;
@@ -14,7 +25,12 @@ interface StaticParam {
 export const dynamicParams = false;
 
 export function generateStaticParams(): StaticParam[] {
-  return getEntries().map(({ route }) => {
+  const routes = [
+    ...getEntries().map((entry) => entry.route),
+    ...getTaxonomyViewRoutes(getViews(), getTaxonomy())
+  ];
+
+  return [...new Set(routes)].map((route) => {
     const slug = route
       .split("/")
       .map((segment) => segment.trim())
@@ -28,18 +44,42 @@ export async function generateMetadata({
   params
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const entry = getEntryByRoute(slug.join("/"));
+  const route = slug.join("/");
+  const entry = getEntryByRoute(route);
+  const viewMatch = resolveTaxonomyViewRoute(route, getViews(), getTaxonomy());
 
-  return entry
-    ? { title: entry.title, description: entry.summary }
-    : { title: "Not found" };
+  if (entry) return { title: entry.title, description: entry.summary };
+  if (viewMatch) {
+    return {
+      title: viewMatch.option.label,
+      description: viewMatch.option.summary
+    };
+  }
+
+  return { title: "Not found" };
 }
 
 export default async function EntryPage({ params }: PageProps) {
   const { slug } = await params;
-  const entry = getEntryByRoute(slug.join("/"));
+  const route = slug.join("/");
+  const entry = getEntryByRoute(route);
 
-  if (!entry) notFound();
+  if (entry) return <EntryRenderer entry={entry} />;
 
-  return <EntryRenderer entry={entry} />;
+  const taxonomy = getTaxonomy();
+  const viewMatch = resolveTaxonomyViewRoute(route, getViews(), taxonomy);
+  if (!viewMatch) notFound();
+
+  const entries = filterEntriesForRoute(getEntries(), viewMatch.localView, {
+    value: viewMatch.parameter
+  });
+
+  return (
+    <LocalView
+      option={viewMatch.option}
+      entries={entries}
+      taxonomy={taxonomy}
+      view={viewMatch.localView}
+    />
+  );
 }

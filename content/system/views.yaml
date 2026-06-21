@@ -1,34 +1,50 @@
 schemaVersion: "1"
-defaultView: periodic-catalog
+defaultView: concept-periodic
 
 views:
-  - id: periodic-catalog
-    label: Visual Catalog
-    layout: periodic-grid
+  - id: concept-periodic
+    label: Concept Map
+    layout: taxonomy-periodic
+    source: taxonomy
+    taxonomy: categories
+    routeTemplate: /categories/{value}
+    localView: category-local
+    countBy: attributes.categories
+    fields:
+      - label
+      - code
+      - summary
+      - icon
+      - color
+    presentation:
+      groupDimension: categories
+      showEmptyGroups: true
+      density: spacious
+
+  - id: category-local
+    label: Local View
+    layout: entry-periodic
     source: entries
-    filters:
-      attributes.level: level-0
-    groupBy: attributes.categories
-    allowMultiplePlacement: true
+    routeTemplate: /categories/{value}
+    routeFilter:
+      path: attributes.categories
+      parameter: value
     sortBy: title
     fields:
       - title
       - summary
-      - attributes.categories
       - attributes.artifactKind
       - attributes.lifecycle
       - attributes.level
       - attributes.tags
     presentation:
-      groupDimension: categories
       colorDimension: categories
-      iconDimension: categories
+      iconDimension: artifactKind
       badgeDimensions:
         - lifecycle
         - artifactKind
         - level
       tagsAttribute: tags
-      showEmptyGroups: true
       density: compact
     detailPanel:
       sections:

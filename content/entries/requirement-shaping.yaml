@@ -9,7 +9,7 @@ attributes:
     - requirements
     - quality
     - testing
-  level: level-0
+  level: level-1
   lifecycle: approved
   artifactKind: guide
   tags:

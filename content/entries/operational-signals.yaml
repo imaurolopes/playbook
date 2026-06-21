@@ -9,7 +9,7 @@ attributes:
     - observability
     - reliability
     - processing
-  level: level-0
+  level: level-1
   lifecycle: approved
   artifactKind: checklist
   tags:

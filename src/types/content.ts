@@ -61,6 +61,8 @@ export interface NavigationDefinition {
 export interface TaxonomyOption {
   value: string;
   label: string;
+  code?: string;
+  summary?: string;
   color?: string;
   icon?: string;
   parent?: string;
@@ -95,6 +97,15 @@ export interface ViewDefinition {
   id: string;
   label: string;
   layout: string;
+  source?: string;
+  taxonomy?: string;
+  routeTemplate?: string;
+  localView?: string;
+  countBy?: string;
+  routeFilter?: {
+    path: string;
+    parameter: string;
+  };
   fields?: string[];
   groupBy?: string;
   sortBy?: string;

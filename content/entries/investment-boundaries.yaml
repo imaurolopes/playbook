@@ -9,7 +9,7 @@ attributes:
     - budget
     - business-assessment
     - governance
-  level: level-0
+  level: level-1
   lifecycle: draft
   artifactKind: template
   tags:

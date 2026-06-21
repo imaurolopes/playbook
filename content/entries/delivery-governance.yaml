@@ -9,7 +9,7 @@ attributes:
     - governance
     - quality
     - security
-  level: level-0
+  level: level-1
   lifecycle: approved
   artifactKind: reference
   tags:
