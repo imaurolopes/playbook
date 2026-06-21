@@ -1,6 +1,7 @@
 "use client";
 
 import { IconToken } from "@/components/metadata/icon-token";
+import { resolveTaxonomyOption } from "@/lib/metadata/taxonomy";
 import type {
   Entry,
   MetadataValue,
@@ -24,8 +25,8 @@ function resolveOptions(
     if (!dimension) return [];
 
     return asValues(entry.attributes?.[dimensionId]).flatMap((value) => {
-      const option = dimension.options.find((item) => item.value === value);
-      return option ? [{ dimension, option }] : [];
+      const option = resolveTaxonomyOption(dimension, value);
+      return [{ dimension, option }];
     });
   });
 }
@@ -67,8 +68,9 @@ export function MetadataCard({
   const relationshipIndicators = (entry.relationships ?? []).reduce<
     Array<{ type: string; label: string; icon?: string; color?: string; count: number }>
   >((indicators, relationship) => {
-    const definition = relationshipDimension?.options.find(
-      (option) => option.value === relationship.type
+    const definition = resolveTaxonomyOption(
+      relationshipDimension,
+      relationship.type
     );
     if (!definition?.showOnCard) return indicators;
     const existing = indicators.find((item) => item.type === relationship.type);

@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run validate:metadata && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate:metadata": "node scripts/validate-metadata.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",

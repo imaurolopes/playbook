@@ -4,6 +4,7 @@ import type {
   TaxonomyDefinition,
   TaxonomyOption
 } from "@/types/content";
+import { resolveTaxonomyOption } from "@/lib/metadata/taxonomy";
 
 export interface ResolvedRelationship {
   relationship: Relationship;
@@ -29,9 +30,7 @@ export function resolveOutgoingRelationships(
     relationship,
     target: registry.find((candidate) => candidate.id === relationship.target),
     source: node,
-    definition: dimension?.options.find(
-      (option) => option.value === relationship.type
-    )
+    definition: resolveTaxonomyOption(dimension, relationship.type)
   }));
 }
 
@@ -49,9 +48,7 @@ export function resolveIncomingRelationships(
         relationship,
         target: node,
         source,
-        definition: dimension?.options.find(
-          (option) => option.value === relationship.type
-        )
+        definition: resolveTaxonomyOption(dimension, relationship.type)
       }))
   );
 }

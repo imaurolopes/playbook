@@ -3,6 +3,7 @@ import type {
   TaxonomyDefinition,
   TaxonomyOption
 } from "@/types/content";
+import { resolveTaxonomyOption } from "@/lib/metadata/taxonomy";
 
 export interface Presentation {
   labels: string[];
@@ -23,8 +24,7 @@ export function resolvePresentation(
 
     for (const value of values) {
       if (typeof value !== "string") continue;
-      const option = dimension.options.find((item) => item.value === value);
-      if (!option) continue;
+      const option = resolveTaxonomyOption(dimension, value);
       labels.push(option.label);
       selected ??= option;
     }
