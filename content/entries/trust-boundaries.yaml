@@ -1,0 +1,24 @@
+schemaVersion: "1"
+id: trust-boundaries
+schema: reusable-entry
+title: Trust Boundaries
+summary: Identify assets, actors, data movement, privileges, threats, and required controls.
+route: /knowledge/trust-boundaries
+attributes:
+  categories:
+    - security
+    - architecture
+    - integration
+  level: level-0
+  lifecycle: review
+  artifactKind: guide
+  tags:
+    - threat-modeling
+    - identity
+    - controls
+  evidenceRequired: true
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/trust-boundaries
+    appearance: primary

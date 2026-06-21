@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconToken } from "@/components/metadata/icon-token";
 import type { NavigationNode } from "@/types/content";
 
 function NavigationItems({ items }: { items: NavigationNode[] }) {
@@ -11,7 +12,9 @@ function NavigationItems({ items }: { items: NavigationNode[] }) {
               href={item.route}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
             >
-              {item.icon ? <span aria-hidden>{item.icon}</span> : null}
+              {item.icon ? (
+                <IconToken token={item.icon} className="size-4 shrink-0" />
+              ) : null}
               <span>{item.label}</span>
             </Link>
           ) : (

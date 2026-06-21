@@ -1,0 +1,30 @@
+schemaVersion: "1"
+id: verification-strategy
+schema: reusable-entry
+title: Verification Strategy
+summary: Align test layers, evidence, environments, ownership, and release confidence with material risks.
+route: /knowledge/verification-strategy
+attributes:
+  categories:
+    - testing
+    - quality
+    - reliability
+  level: level-0
+  lifecycle: approved
+  artifactKind: guide
+  tags:
+    - risk
+    - evidence
+    - automation
+  strategyBasis: risk-driven
+relationships:
+  - type: uses
+    target: delivery-readiness-checklist
+documents:
+  - path: checklists/delivery-readiness.md
+    label: Delivery readiness guidance
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/verification-strategy
+    appearance: primary

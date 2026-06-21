@@ -1,0 +1,33 @@
+schemaVersion: "1"
+id: outcome-discovery
+schema: reusable-entry
+title: Outcome Discovery
+summary: Frame the desired change, affected people, evidence, and unresolved assumptions.
+route: /knowledge/outcome-discovery
+attributes:
+  categories:
+    - discovery
+    - business-assessment
+    - requirements
+  level: level-0
+  lifecycle: approved
+  artifactKind: question-set
+  tags:
+    - outcomes
+    - stakeholders
+    - evidence
+  timebox: 60–90 minutes
+  produces:
+    - outcome statement
+    - evidence backlog
+relationships:
+  - type: expands-to
+    target: discovery-starter
+documents:
+  - path: discovery/starter-guide.md
+    label: Discovery starter guide
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/outcome-discovery
+    appearance: primary

@@ -1,0 +1,27 @@
+schemaVersion: "1"
+id: delivery-governance
+schema: reusable-entry
+title: Delivery Governance
+summary: Make decision rights, evidence expectations, review points, and exceptions explicit.
+route: /knowledge/delivery-governance
+attributes:
+  categories:
+    - governance
+    - quality
+    - security
+  level: level-0
+  lifecycle: approved
+  artifactKind: reference
+  tags:
+    - ownership
+    - assurance
+    - exceptions
+  operatingModel: federated
+relationships:
+  - type: uses
+    target: delivery-readiness-checklist
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/delivery-governance
+    appearance: primary

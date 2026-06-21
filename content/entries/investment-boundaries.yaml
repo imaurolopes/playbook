@@ -1,0 +1,24 @@
+schemaVersion: "1"
+id: investment-boundaries
+schema: reusable-entry
+title: Investment Boundaries
+summary: Establish cost ranges, capacity assumptions, decision thresholds, and financial guardrails.
+route: /knowledge/investment-boundaries
+attributes:
+  categories:
+    - budget
+    - business-assessment
+    - governance
+  level: level-0
+  lifecycle: draft
+  artifactKind: template
+  tags:
+    - cost
+    - capacity
+    - guardrails
+  currencyAgnostic: true
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/investment-boundaries
+    appearance: primary

@@ -20,6 +20,13 @@ export interface DocumentReference {
   label?: string;
 }
 
+export interface EntryAction {
+  label: string;
+  icon?: string;
+  href: string;
+  appearance?: string;
+}
+
 export interface Entry {
   schemaVersion: string;
   id: string;
@@ -31,6 +38,7 @@ export interface Entry {
   relationships?: Relationship[];
   content?: ContentBlock[];
   documents?: DocumentReference[];
+  actions?: EntryAction[];
 }
 
 export interface NavigationNode {
@@ -38,6 +46,10 @@ export interface NavigationNode {
   icon?: string;
   entry?: string;
   route?: string;
+  source?: string;
+  taxonomy?: string;
+  hierarchy?: string;
+  routeTemplate?: string;
   children?: NavigationNode[];
 }
 
@@ -52,12 +64,21 @@ export interface TaxonomyOption {
   color?: string;
   icon?: string;
   parent?: string;
+  group?: string;
+  order?: number;
+}
+
+export interface TaxonomyGroup {
+  id: string;
+  label: string;
   order?: number;
 }
 
 export interface TaxonomyDimension {
   id: string;
   label: string;
+  cardinality?: string;
+  groups?: TaxonomyGroup[];
   options: TaxonomyOption[];
 }
 
@@ -78,6 +99,20 @@ export interface ViewDefinition {
   groupBy?: string;
   sortBy?: string;
   filters?: Record<string, MetadataValue>;
+  allowMultiplePlacement?: boolean;
+  presentation?: {
+    groupDimension?: string;
+    colorDimension?: string;
+    iconDimension?: string;
+    badgeDimensions?: string[];
+    tagsAttribute?: string;
+    showEmptyGroups?: boolean;
+    density?: string;
+  };
+  detailPanel?: {
+    sections?: string[];
+    showAllAttributes?: boolean;
+  };
 }
 
 export interface ViewsDefinition {

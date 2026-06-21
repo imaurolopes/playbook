@@ -1,0 +1,27 @@
+schemaVersion: "1"
+id: operational-signals
+schema: reusable-entry
+title: Operational Signals
+summary: Define the signals, context, ownership, and response paths needed to understand system behavior.
+route: /knowledge/operational-signals
+attributes:
+  categories:
+    - observability
+    - reliability
+    - processing
+  level: level-0
+  lifecycle: approved
+  artifactKind: checklist
+  tags:
+    - telemetry
+    - alerting
+    - diagnosis
+  signalTypes:
+    - metrics
+    - logs
+    - traces
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/operational-signals
+    appearance: primary

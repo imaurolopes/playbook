@@ -1,0 +1,27 @@
+schemaVersion: "1"
+id: requirement-shaping
+schema: reusable-entry
+title: Requirement Shaping
+summary: Turn needs and constraints into testable, traceable statements without prescribing a solution too early.
+route: /knowledge/requirement-shaping
+attributes:
+  categories:
+    - requirements
+    - quality
+    - testing
+  level: level-0
+  lifecycle: approved
+  artifactKind: guide
+  tags:
+    - acceptance
+    - traceability
+    - constraints
+  outputFormat: testable statements
+relationships:
+  - type: validated-by
+    target: verification-strategy
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/requirement-shaping
+    appearance: primary

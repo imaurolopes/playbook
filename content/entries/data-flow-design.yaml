@@ -1,0 +1,28 @@
+schemaVersion: "1"
+id: data-flow-design
+schema: reusable-entry
+title: Data Flow Design
+summary: Describe movement, transformation, persistence, ownership, and failure handling across boundaries.
+route: /knowledge/data-flow-design
+attributes:
+  categories:
+    - integration
+    - processing
+    - storage
+    - observability
+  level: level-0
+  lifecycle: review
+  artifactKind: concept
+  tags:
+    - data
+    - contracts
+    - lineage
+  consistencyModel: context-dependent
+relationships:
+  - type: informed-by
+    target: technical-landscape
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/data-flow-design
+    appearance: primary

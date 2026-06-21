@@ -1,0 +1,27 @@
+schemaVersion: "1"
+id: technical-landscape
+schema: reusable-entry
+title: Technical Landscape
+summary: Capture systems, constraints, ownership boundaries, dependencies, and delivery conditions.
+route: /knowledge/technical-landscape
+attributes:
+  categories:
+    - technical-assessment
+    - architecture
+    - integration
+  level: level-0
+  lifecycle: approved
+  artifactKind: template
+  tags:
+    - systems
+    - constraints
+    - dependencies
+  reviewCadence: per initiative
+relationships:
+  - type: informs
+    target: static-delivery-decision
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/technical-landscape
+    appearance: primary

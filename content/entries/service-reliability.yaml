@@ -1,0 +1,24 @@
+schemaVersion: "1"
+id: service-reliability
+schema: reusable-entry
+title: Service Reliability
+summary: Shape availability, resilience, recovery, capacity, and operational ownership expectations.
+route: /knowledge/service-reliability
+attributes:
+  categories:
+    - reliability
+    - observability
+    - quality
+  level: level-0
+  lifecycle: approved
+  artifactKind: decision-matrix
+  tags:
+    - resilience
+    - recovery
+    - capacity
+  reviewCadence: quarterly
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/service-reliability
+    appearance: primary

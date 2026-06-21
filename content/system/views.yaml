@@ -1,7 +1,43 @@
 schemaVersion: "1"
-defaultView: catalog
+defaultView: periodic-catalog
 
 views:
+  - id: periodic-catalog
+    label: Visual Catalog
+    layout: periodic-grid
+    source: entries
+    filters:
+      attributes.level: level-0
+    groupBy: attributes.categories
+    allowMultiplePlacement: true
+    sortBy: title
+    fields:
+      - title
+      - summary
+      - attributes.categories
+      - attributes.artifactKind
+      - attributes.lifecycle
+      - attributes.level
+      - attributes.tags
+    presentation:
+      groupDimension: categories
+      colorDimension: categories
+      iconDimension: categories
+      badgeDimensions:
+        - lifecycle
+        - artifactKind
+        - level
+      tagsAttribute: tags
+      showEmptyGroups: true
+      density: compact
+    detailPanel:
+      sections:
+        - attributes
+        - relationships
+        - documents
+        - actions
+      showAllAttributes: true
+
   - id: catalog
     label: Catalog
     layout: cards

@@ -1,0 +1,26 @@
+schemaVersion: "1"
+id: knowledge-practice
+schema: reusable-entry
+title: Knowledge Practice
+summary: Build repeatable ways to capture, review, teach, and operationalize reusable engineering knowledge.
+route: /knowledge/knowledge-practice
+attributes:
+  categories:
+    - skills
+    - checklists
+    - governance
+  level: level-0
+  lifecycle: draft
+  artifactKind: concept
+  tags:
+    - learning
+    - reuse
+    - maintenance
+  audience:
+    - humans
+    - agents
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/knowledge-practice
+    appearance: primary

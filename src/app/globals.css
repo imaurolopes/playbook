@@ -44,4 +44,21 @@
   .document-content code {
     @apply rounded bg-muted px-1 py-0.5 text-sm;
   }
+
+  .periodic-grid {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  }
+
+  .detail-heading {
+    @apply mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .panel-action-primary {
+    @apply inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90;
+  }
+
+  .panel-action-secondary {
+    @apply inline-flex items-center gap-2 rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted;
+  }
 }

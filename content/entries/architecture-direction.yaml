@@ -1,0 +1,28 @@
+schemaVersion: "1"
+id: architecture-direction
+schema: reusable-entry
+title: Architecture Direction
+summary: Define structural choices, boundaries, quality drivers, and the decisions that require durable records.
+route: /knowledge/architecture-direction
+attributes:
+  categories:
+    - architecture
+    - reliability
+    - security
+    - governance
+  level: level-0
+  lifecycle: approved
+  artifactKind: concept
+  tags:
+    - boundaries
+    - trade-offs
+    - decisions
+  decisionHorizon: strategic
+relationships:
+  - type: demonstrated-by
+    target: static-delivery-decision
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/architecture-direction
+    appearance: primary

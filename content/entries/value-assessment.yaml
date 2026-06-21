@@ -1,0 +1,32 @@
+schemaVersion: "1"
+id: value-assessment
+schema: reusable-entry
+title: Value Assessment
+summary: Connect proposed work to measurable value, urgency, ownership, and trade-offs.
+route: /knowledge/value-assessment
+attributes:
+  categories:
+    - business-assessment
+    - budget
+    - governance
+  level: level-0
+  lifecycle: review
+  artifactKind: decision-matrix
+  tags:
+    - value
+    - prioritization
+    - investment
+  evidenceRequired: true
+content:
+  - kind: criteria
+    title: Assessment lenses
+    items:
+      - value
+      - urgency
+      - confidence
+      - effort
+actions:
+  - label: Open full entry
+    icon: arrow-up-right
+    href: /knowledge/value-assessment
+    appearance: primary

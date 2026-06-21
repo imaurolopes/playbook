@@ -1,13 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getEntries, getNavigation } from "@/lib/content/load";
+import { getEntries, getNavigation, getTaxonomy } from "@/lib/content/load";
 import { resolveNavigation } from "@/lib/navigation/resolve";
 import { Navigation } from "@/components/shell/navigation";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const definition = getNavigation();
-  const items = resolveNavigation(definition.items, getEntries());
+  const items = resolveNavigation(
+    definition.items,
+    getEntries(),
+    getTaxonomy()
+  );
 
   return (
     <div className="min-h-screen">
