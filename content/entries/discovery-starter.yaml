@@ -1,0 +1,29 @@
+schemaVersion: "1"
+id: discovery-starter
+schema: reusable-entry
+title: Discovery Starter
+summary: A reusable starting point for understanding an initiative and its operating context.
+route: /knowledge/discovery-starter
+attributes:
+  knowledge-kind: guide
+  focus-area:
+    - discovery
+    - business-assessment
+  lifecycle: draft
+  audience:
+    - engineers
+    - agents
+relationships:
+  - type: informs
+    target: static-delivery-decision
+content:
+  - kind: prompts
+    title: Initial prompts
+    items:
+      - What outcome should change?
+      - Who experiences the problem?
+      - Which constraints are already known?
+      - How will success be measured?
+documents:
+  - path: discovery/starter-guide.md
+    label: Guide

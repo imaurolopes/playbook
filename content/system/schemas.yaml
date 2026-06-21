@@ -1,0 +1,73 @@
+schemaVersion: "1"
+schemas:
+  - id: reusable-entry
+    label: Reusable knowledge entry
+    storage: entries
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - route
+    fields:
+      summary:
+        type: string
+      attributes:
+        type: object
+        taxonomyDriven: true
+      relationships:
+        type: list
+        itemSchema: relationship
+      content:
+        type: list
+        itemSchema: content-block
+      documents:
+        type: list
+        itemSchema: document-reference
+
+  - id: project-output
+    label: Project-specific output
+    storage: projects
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - project
+      - title
+    fields:
+      project:
+        type: string
+      attributes:
+        type: object
+        taxonomyDriven: true
+      sourceEntries:
+        type: list
+      data:
+        type: object
+      documents:
+        type: list
+
+definitions:
+  relationship:
+    required:
+      - type
+      - target
+    fields:
+      type:
+        type: string
+      target:
+        type: string
+
+  content-block:
+    required:
+      - kind
+    open: true
+
+  document-reference:
+    required:
+      - path
+    fields:
+      path:
+        type: string
+      label:
+        type: string

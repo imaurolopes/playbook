@@ -1,0 +1,31 @@
+schemaVersion: "1"
+id: delivery-readiness-checklist
+schema: reusable-entry
+title: Delivery Readiness Checklist
+summary: A compact reusable checklist for reviewing an initial delivery foundation.
+route: /knowledge/delivery-readiness-checklist
+attributes:
+  knowledge-kind: checklist
+  focus-area:
+    - quality
+    - testing
+    - governance
+  lifecycle: review
+relationships:
+  - type: validates
+    target: static-delivery-decision
+content:
+  - kind: checklist
+    title: Foundation checks
+    items:
+      - id: metadata
+        label: Domain concepts are defined in content metadata
+      - id: build
+        label: The static export builds successfully
+      - id: theme
+        label: Light and dark modes are usable
+      - id: deployment
+        label: GitHub Pages deployment is configured
+documents:
+  - path: checklists/delivery-readiness.md
+    label: Checklist guidance

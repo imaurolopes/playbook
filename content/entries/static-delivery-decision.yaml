@@ -1,0 +1,29 @@
+schemaVersion: "1"
+id: static-delivery-decision
+schema: reusable-entry
+title: Static Delivery Decision
+summary: An example record showing how a technical decision can be represented as reusable metadata.
+route: /knowledge/static-delivery-decision
+attributes:
+  knowledge-kind: decision-record
+  focus-area:
+    - architecture-decisions
+    - solution-design
+  lifecycle: approved
+  decision: Static export hosted by GitHub Pages
+relationships:
+  - type: informed-by
+    target: discovery-starter
+  - type: validated-by
+    target: delivery-readiness-checklist
+content:
+  - kind: context
+    title: Context
+    text: The initial site is content-oriented and does not require a runtime server.
+  - kind: outcome
+    title: Outcome
+    status: accepted
+    consequences:
+      - Low operational overhead
+      - Routes must be known at build time
+      - Dynamic server features are unavailable

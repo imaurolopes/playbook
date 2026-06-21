@@ -1,0 +1,113 @@
+dimensions:
+  - id: knowledge-kind
+    label: Knowledge kind
+    options:
+      - value: guide
+        label: Guide
+        icon: "📘"
+        color: "#2563eb"
+        order: 10
+      - value: decision-record
+        label: Decision record
+        icon: "⚖️"
+        color: "#7c3aed"
+        order: 20
+      - value: checklist
+        label: Checklist
+        icon: "✅"
+        color: "#059669"
+        order: 30
+      - value: project-output
+        label: Project output
+        icon: "📦"
+        color: "#d97706"
+        order: 40
+
+  - id: focus-area
+    label: Focus area
+    options:
+      - value: discovery
+        label: Discovery
+        icon: "🔎"
+        color: "#0284c7"
+        order: 10
+      - value: business-assessment
+        label: Business Assessment
+        icon: "📊"
+        color: "#4f46e5"
+        order: 20
+      - value: technical-requirements
+        label: Technical Requirements
+        icon: "🧩"
+        color: "#7c3aed"
+        order: 30
+      - value: budget-assessment
+        label: Budget Assessment
+        icon: "💰"
+        color: "#ca8a04"
+        order: 40
+      - value: architecture-decisions
+        label: Architecture Decisions
+        icon: "🏛️"
+        color: "#9333ea"
+        order: 50
+      - value: solution-design
+        label: Solution Design
+        icon: "✏️"
+        color: "#db2777"
+        order: 60
+      - value: implementation-guidance
+        label: Implementation Guidance
+        icon: "🛠️"
+        color: "#ea580c"
+        order: 70
+      - value: quality
+        label: Quality
+        icon: "✨"
+        color: "#16a34a"
+        order: 80
+      - value: security
+        label: Security
+        icon: "🛡️"
+        color: "#dc2626"
+        order: 90
+      - value: governance
+        label: Governance
+        icon: "📜"
+        color: "#475569"
+        order: 100
+      - value: testing
+        label: Testing
+        icon: "🧪"
+        color: "#0891b2"
+        order: 110
+      - value: skills
+        label: Skills
+        icon: "🎓"
+        color: "#6366f1"
+        order: 120
+      - value: agent-knowledge
+        label: Agent-ready Knowledge
+        icon: "🤖"
+        color: "#0f766e"
+        order: 130
+
+  - id: lifecycle
+    label: Lifecycle
+    options:
+      - value: draft
+        label: Draft
+        color: "#64748b"
+        order: 10
+      - value: review
+        label: In review
+        color: "#d97706"
+        order: 20
+      - value: approved
+        label: Approved
+        color: "#16a34a"
+        order: 30
+      - value: deprecated
+        label: Deprecated
+        color: "#dc2626"
+        order: 40

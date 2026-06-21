@@ -1,0 +1,21 @@
+defaultView: catalog
+views:
+  - id: catalog
+    label: Knowledge catalog
+    layout: cards
+    fields:
+      - title
+      - summary
+      - attributes
+    sortBy: title
+  - id: by-focus
+    label: Grouped by focus
+    layout: grouped-list
+    groupBy: attributes.focus-area
+    sortBy: title
+  - id: approved
+    label: Approved knowledge
+    layout: cards
+    filters:
+      attributes.lifecycle: approved
+    sortBy: title

@@ -1,0 +1,25 @@
+schemaVersion: "1"
+id: example-project-context
+schema: project-output
+project: example-project
+title: Example Project Context
+attributes:
+  knowledge-kind: project-output
+  focus-area:
+    - discovery
+    - technical-requirements
+  lifecycle: draft
+sourceEntries:
+  - discovery-starter
+data:
+  desiredOutcome: Demonstrate how filled project knowledge is kept separate from reusable guidance.
+  stakeholders:
+    - Engineering
+    - Operations
+  constraints:
+    - Static hosting
+    - Content must remain reviewable in Git
+  openQuestions:
+    - Which validation workflow will be adopted?
+    - Who owns taxonomy governance?
+documents: []

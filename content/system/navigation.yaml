@@ -1,0 +1,13 @@
+title: Playbook
+items:
+  - label: Start
+    icon: "⌂"
+    route: /
+  - label: Explore
+    children:
+      - label: Discovery starter
+        entry: discovery-starter
+      - label: Decision record
+        entry: static-delivery-decision
+      - label: Readiness checklist
+        entry: delivery-readiness-checklist
