@@ -1,0 +1,36 @@
+schemaVersion: "1"
+id: discussion-architecture-boundaries
+schema: knowledge-source
+title: Architecture Boundary Discussion
+summary: Raw notes from a technical discussion about ownership boundaries and decision durability.
+attributes:
+  sourceKind: discussion
+  artifactKind: source
+  lifecycle: draft
+  categories:
+    - architecture
+    - governance
+  tags:
+    - boundaries
+    - ownership
+    - decisions
+  confidence: medium
+  reviewStatus: unreviewed
+provenance:
+  origin: internal-discussion
+  locator: engineering-forum/architecture-boundaries
+  capturedBy: facilitation-agent
+  capturedAt: "2026-06-21"
+relationships:
+  - type: informs
+    target: architecture-direction
+content:
+  - kind: observation
+    title: Ownership pressure
+    text: Decisions become difficult to reverse when ownership boundaries are implicit.
+  - kind: question
+    text: Which boundaries require durable decision records?
+supportingMaterials:
+  - kind: meeting-notes
+    locator: internal://engineering-forum/architecture-boundaries
+    label: Discussion transcript

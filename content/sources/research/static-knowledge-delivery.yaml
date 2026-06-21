@@ -1,0 +1,37 @@
+schemaVersion: "1"
+id: research-static-knowledge-delivery
+schema: knowledge-source
+title: Static Knowledge Delivery Research
+summary: Research notes comparing static publication with runtime content delivery for reviewable knowledge.
+attributes:
+  sourceKind: research
+  artifactKind: source
+  lifecycle: review
+  categories:
+    - architecture
+    - reliability
+    - governance
+  tags:
+    - static-export
+    - publishing
+    - version-control
+  confidence: high
+  reviewStatus: reviewed
+provenance:
+  origin: internal-research
+  locator: research/static-knowledge-delivery
+  capturedBy: engineering-research
+  capturedAt: "2026-06-20"
+relationships:
+  - type: supports
+    target: static-delivery-decision
+content:
+  - kind: finding
+    title: Reviewability
+    text: Static generation keeps source material and published output aligned with repository review workflows.
+  - kind: limitation
+    text: Runtime personalization and server-side features require a different delivery model.
+supportingMaterials:
+  - kind: comparison-table
+    locator: internal://research/static-delivery-options
+    label: Delivery model comparison

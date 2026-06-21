@@ -19,6 +19,8 @@ attributes:
     - decisions
   decisionHorizon: strategic
 relationships:
+  - type: derived-from
+    target: discussion-architecture-boundaries
   - type: demonstrated-by
     target: static-delivery-decision
 actions:

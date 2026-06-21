@@ -1,0 +1,39 @@
+schemaVersion: "1"
+id: evaluation-test-evidence
+schema: knowledge-source
+title: Test Evidence Evaluation
+summary: Evaluation of whether delivery checks request meaningful evidence rather than ceremonial completion.
+attributes:
+  sourceKind: evaluation
+  artifactKind: evaluation
+  lifecycle: review
+  categories:
+    - testing
+    - quality
+    - governance
+  tags:
+    - evidence
+    - assurance
+    - readiness
+  confidence: high
+  reviewStatus: reviewed
+provenance:
+  origin: internal-evaluation
+  locator: evaluations/test-evidence
+  capturedBy: quality-review
+  capturedAt: "2026-06-19"
+relationships:
+  - type: validates
+    target: verification-strategy
+  - type: informs
+    target: delivery-readiness-checklist
+content:
+  - kind: finding
+    title: Evidence quality
+    text: Checks are more useful when each completion records evidence, reviewer, date, exception, and follow-up owner.
+  - kind: recommendation
+    text: Prefer risk-based evidence prompts over universal pass or fail statements.
+supportingMaterials:
+  - kind: scoring-rubric
+    locator: internal://evaluations/test-evidence-rubric
+    label: Evidence quality rubric

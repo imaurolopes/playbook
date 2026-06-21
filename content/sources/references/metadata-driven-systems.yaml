@@ -1,0 +1,33 @@
+schemaVersion: "1"
+id: reference-metadata-driven-systems
+schema: knowledge-source
+title: Metadata-Driven Systems Reference
+summary: A reference record for principles used when separating domain configuration from generic runtime behavior.
+attributes:
+  sourceKind: reference
+  artifactKind: source
+  lifecycle: approved
+  categories:
+    - architecture
+    - governance
+  tags:
+    - metadata
+    - configuration
+    - runtime
+  confidence: high
+  reviewStatus: reviewed
+provenance:
+  origin: external-reference
+  locator: https://en.wikipedia.org/wiki/Metadata
+  capturedBy: repository-maintainer
+  capturedAt: "2026-06-21"
+relationships:
+  - type: related-to
+    target: note-metadata-model-thoughts
+content:
+  - kind: principle
+    text: Metadata describes other data and can drive classification, presentation, and interpretation.
+supportingMaterials:
+  - kind: web-reference
+    locator: https://en.wikipedia.org/wiki/Metadata
+    label: Metadata overview

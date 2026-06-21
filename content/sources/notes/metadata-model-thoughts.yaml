@@ -1,0 +1,35 @@
+schemaVersion: "1"
+id: note-metadata-model-thoughts
+schema: knowledge-source
+title: Metadata Model Working Notes
+summary: Evolving thoughts about keeping classifications, views, and hierarchy outside application code.
+attributes:
+  sourceKind: note
+  artifactKind: observation
+  lifecycle: draft
+  categories:
+    - architecture
+    - governance
+  tags:
+    - metadata
+    - taxonomy
+    - evolution
+  confidence: medium
+  reviewStatus: unreviewed
+provenance:
+  origin: working-note
+  locator: notes/metadata-model
+  capturedBy: repository-maintainer
+  capturedAt: "2026-06-21"
+relationships:
+  - type: related-to
+    target: architecture-direction
+content:
+  - kind: observation
+    text: Folder placement should aid humans without becoming the authoritative classification mechanism.
+  - kind: question
+    text: Which metadata changes require governance or migration guidance?
+supportingMaterials:
+  - kind: sketch
+    locator: internal://notes/metadata-model-sketch
+    label: Early metadata sketch

@@ -18,6 +18,8 @@ attributes:
     - automation
   strategyBasis: risk-driven
 relationships:
+  - type: derived-from
+    target: evaluation-test-evidence
   - type: uses
     target: delivery-readiness-checklist
 documents:

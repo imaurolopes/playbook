@@ -273,3 +273,84 @@ dimensions:
         icon: scale
         color: "#9333ea"
         order: 100
+      - value: source
+        label: Source
+        icon: archive
+        color: "#64748b"
+        order: 110
+      - value: observation
+        label: Observation
+        icon: eye
+        color: "#0284c7"
+        order: 120
+      - value: experiment
+        label: Experiment
+        icon: flask-conical
+        color: "#ea580c"
+        order: 130
+      - value: evaluation
+        label: Evaluation
+        icon: clipboard-check
+        color: "#7c3aed"
+        order: 140
+
+  - id: sourceKind
+    label: Source Kind
+    cardinality: one
+    options:
+      - value: discussion
+        label: Discussion
+        icon: messages-square
+        color: "#4f46e5"
+        order: 10
+      - value: research
+        label: Research
+        icon: search
+        color: "#0284c7"
+        order: 20
+      - value: note
+        label: Note
+        icon: notebook-pen
+        color: "#64748b"
+        order: 30
+      - value: evaluation
+        label: Evaluation
+        icon: clipboard-check
+        color: "#7c3aed"
+        order: 40
+      - value: lesson-learned
+        label: Lesson Learned
+        icon: lightbulb
+        color: "#d97706"
+        order: 50
+      - value: reference
+        label: Reference
+        icon: library
+        color: "#475569"
+        order: 60
+
+  - id: relationshipKind
+    label: Relationship Kind
+    cardinality: one
+    options:
+      - value: derived-from
+        label: Derived From
+        order: 10
+      - value: informs
+        label: Informs
+        order: 20
+      - value: supports
+        label: Supports
+        order: 30
+      - value: challenges
+        label: Challenges
+        order: 40
+      - value: validates
+        label: Validates
+        order: 50
+      - value: supersedes
+        label: Supersedes
+        order: 60
+      - value: related-to
+        label: Related To
+        order: 70

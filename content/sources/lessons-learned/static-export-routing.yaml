@@ -1,0 +1,38 @@
+schemaVersion: "1"
+id: lesson-static-export-routing
+schema: knowledge-source
+title: Static Export Routing Lesson
+summary: Lessons captured while reconciling catch-all routes, generated parameters, and static assets.
+attributes:
+  sourceKind: lesson-learned
+  artifactKind: observation
+  lifecycle: approved
+  categories:
+    - architecture
+    - quality
+    - testing
+  tags:
+    - routing
+    - static-export
+    - assets
+  confidence: high
+  reviewStatus: reviewed
+provenance:
+  origin: implementation-experience
+  locator: lessons/static-export-routing
+  capturedBy: implementation-team
+  capturedAt: "2026-06-21"
+relationships:
+  - type: supports
+    target: static-delivery-decision
+content:
+  - kind: lesson
+    title: Static assets must remain static
+    text: Common asset requests should resolve before a generic catch-all content route.
+  - kind: lesson
+    title: Routes must be enumerable
+    text: Every exported dynamic route requires a build-time parameter generated from metadata.
+supportingMaterials:
+  - kind: build-log
+    locator: internal://lessons/static-export-build-log
+    label: Build verification notes

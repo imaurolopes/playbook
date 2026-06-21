@@ -47,6 +47,35 @@ schemas:
       documents:
         type: list
 
+  - id: knowledge-source
+    label: Knowledge source
+    storage: sources
+    required:
+      - schemaVersion
+      - id
+      - schema
+      - title
+      - attributes
+      - provenance
+    fields:
+      summary:
+        type: string
+      attributes:
+        type: object
+        taxonomyDriven: true
+      provenance:
+        type: object
+        itemSchema: provenance
+      relationships:
+        type: list
+        itemSchema: relationship
+      content:
+        type: list
+        itemSchema: content-block
+      supportingMaterials:
+        type: list
+        itemSchema: supporting-material
+
 definitions:
   relationship:
     required:
@@ -55,6 +84,7 @@ definitions:
     fields:
       type:
         type: string
+        taxonomy: relationshipKind
       target:
         type: string
 
@@ -68,6 +98,34 @@ definitions:
       - path
     fields:
       path:
+        type: string
+      label:
+        type: string
+
+  provenance:
+    required:
+      - origin
+      - capturedAt
+    open: true
+    fields:
+      origin:
+        type: string
+      locator:
+        type: string
+      capturedBy:
+        type: string
+      capturedAt:
+        type: string
+
+  supporting-material:
+    required:
+      - kind
+      - locator
+    open: true
+    fields:
+      kind:
+        type: string
+      locator:
         type: string
       label:
         type: string
