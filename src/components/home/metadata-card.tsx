@@ -1,7 +1,10 @@
 "use client";
 
 import { IconToken } from "@/components/metadata/icon-token";
-import { resolveTaxonomyOption } from "@/lib/metadata/taxonomy";
+import {
+  resolveTaxonomyDimension,
+  resolveTaxonomyOption
+} from "@/lib/metadata/taxonomy";
 import type {
   Entry,
   MetadataValue,
@@ -21,7 +24,10 @@ function resolveOptions(
   dimensionIds: string[]
 ) {
   return dimensionIds.flatMap((dimensionId) => {
-    const dimension = dimensions.find((item) => item.id === dimensionId);
+    const dimension = resolveTaxonomyDimension(
+      { dimensions },
+      dimensionId
+    );
     if (!dimension) return [];
 
     return asValues(entry.attributes?.[dimensionId]).flatMap((value) => {
@@ -40,12 +46,14 @@ export function MetadataCard({
   category,
   dimensions,
   view,
+  density,
   onSelect
 }: {
   entry: Entry;
   category: TaxonomyOption;
   dimensions: TaxonomyDimension[];
   view: ViewDefinition;
+  density?: string;
   onSelect: (entry: Entry) => void;
 }) {
   const badgeDimensions = view.presentation?.badgeDimensions ?? [];
@@ -62,8 +70,15 @@ export function MetadataCard({
     ([key]) => !taxonomyKeys.has(key)
   );
   const color = category.color ?? "#64748b";
-  const relationshipDimension = dimensions.find(
-    (dimension) => dimension.id === "relationshipKind"
+  const densityClass =
+    density === "compact"
+      ? "min-h-44 p-3"
+      : density === "spacious"
+        ? "min-h-60 p-5"
+        : "min-h-52 p-4";
+  const relationshipDimension = resolveTaxonomyDimension(
+    { dimensions },
+    "relationshipKind"
   );
   const relationshipIndicators = (entry.relationships ?? []).reduce<
     Array<{ type: string; label: string; icon?: string; color?: string; count: number }>
@@ -92,7 +107,7 @@ export function MetadataCard({
     <button
       type="button"
       onClick={() => onSelect(entry)}
-      className="group relative flex min-h-52 w-full flex-col overflow-hidden rounded-xl border bg-background/90 p-4 text-left shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className={`group relative flex w-full flex-col overflow-hidden rounded-xl border bg-background/90 text-left shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${densityClass}`}
       style={{
         borderColor: colorWithAlpha(color, "55"),
         backgroundImage: `linear-gradient(145deg, ${colorWithAlpha(

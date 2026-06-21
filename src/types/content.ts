@@ -115,6 +115,7 @@ export interface ViewDefinition {
   taxonomy?: string;
   routeTemplate?: string;
   localView?: string;
+  displayLevel?: string;
   countBy?: string;
   routeFilter?: {
     path: string;
@@ -140,7 +141,45 @@ export interface ViewDefinition {
   };
 }
 
+export interface ViewLayoutSettings {
+  layout: string;
+  cardDensity?: string;
+  enabledPanels?: string[];
+  detailSections?: string[];
+  groupBy?: string;
+  dateField?: string;
+  columns?: string[];
+}
+
+export interface ResolvedViewLayout extends ViewLayoutSettings {
+  source: "node" | "category" | "level" | "fallback";
+  matchedCategory?: string;
+}
+
+export interface ViewEngineDefinition {
+  selectors?: {
+    levelAttribute?: string;
+    categoryAttribute?: string;
+  };
+  fallback: ViewLayoutSettings;
+  defaults?: {
+    level?: Record<string, Partial<ViewLayoutSettings>>;
+    [dimension: string]:
+      | Record<string, Partial<ViewLayoutSettings>>
+      | undefined;
+  };
+  overrides?: {
+    categories?: Record<
+      string,
+      Record<string, Partial<ViewLayoutSettings>>
+    >;
+    nodes?: Record<string, Partial<ViewLayoutSettings>>;
+  };
+  layouts?: Record<string, Partial<ViewLayoutSettings> & { enabled?: boolean }>;
+}
+
 export interface ViewsDefinition {
   defaultView: string;
+  viewEngine: ViewEngineDefinition;
   views: ViewDefinition[];
 }

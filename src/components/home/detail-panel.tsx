@@ -7,11 +7,11 @@ import { IconToken } from "@/components/metadata/icon-token";
 import { MetadataValueView } from "@/components/home/metadata-value";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
 import { resolveOutgoingRelationships } from "@/lib/relationships/resolve";
+import { resolveTaxonomyDimension } from "@/lib/metadata/taxonomy";
 import type {
   Entry,
   KnowledgeNode,
-  TaxonomyDefinition,
-  ViewDefinition
+  TaxonomyDefinition
 } from "@/types/content";
 
 function humanize(value: string) {
@@ -25,13 +25,13 @@ export function DetailPanel({
   entry,
   registry,
   taxonomy,
-  view,
+  sections: configuredSections,
   onClose
 }: {
   entry?: Entry;
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
-  view: ViewDefinition;
+  sections?: string[];
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -57,7 +57,7 @@ export function DetailPanel({
     : [];
 
   const sections = new Set(
-    view.detailPanel?.sections ?? [
+    configuredSections ?? [
       "attributes",
       "relationships",
       "documents",
@@ -115,9 +115,7 @@ export function DetailPanel({
               <h3 className="detail-heading">Attributes</h3>
               <dl className="space-y-4">
                 {Object.entries(entry.attributes).map(([key, value]) => {
-                  const dimension = taxonomy.dimensions.find(
-                    (item) => item.id === key
-                  );
+                  const dimension = resolveTaxonomyDimension(taxonomy, key);
                   return (
                     <div
                       key={key}

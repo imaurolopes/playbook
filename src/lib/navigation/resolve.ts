@@ -4,6 +4,7 @@ import type {
   TaxonomyDefinition,
   TaxonomyDimension
 } from "@/types/content";
+import { resolveTaxonomyDimension } from "@/lib/metadata/taxonomy";
 
 function taxonomyChildren(
   node: NavigationNode,
@@ -44,7 +45,7 @@ export function resolveNavigation(
       ? entries.find((candidate) => candidate.id === node.entry)
       : undefined;
     const dimension = node.taxonomy
-      ? taxonomy?.dimensions.find((item) => item.id === node.taxonomy)
+      ? taxonomy && resolveTaxonomyDimension(taxonomy, node.taxonomy)
       : undefined;
     const generatedChildren = dimension
       ? taxonomyChildren(node, dimension)

@@ -1,5 +1,75 @@
-schemaVersion: "1"
+schemaVersion: "2"
 defaultView: concept-periodic
+
+viewEngine:
+  selectors:
+    levelAttribute: level
+    categoryAttribute: categories
+
+  fallback:
+    layout: catalog
+    cardDensity: comfortable
+    enabledPanels:
+      - detail
+    detailSections:
+      - attributes
+      - relationships
+      - content
+      - documents
+      - actions
+
+  defaults:
+    level:
+      level-0:
+        layout: periodic
+        cardDensity: spacious
+      level-1:
+        layout: catalog
+        cardDensity: compact
+      level-2:
+        layout: kanban
+        cardDensity: compact
+      level-3:
+        layout: detail
+        cardDensity: comfortable
+
+  overrides:
+    categories:
+      processing:
+        level-1:
+          layout: periodic
+      skills:
+        level-1:
+          layout: catalog
+      sources:
+        level-1:
+          layout: timeline
+
+    nodes:
+      architecture-direction:
+        layout: detail
+
+  layouts:
+    periodic:
+      enabled: true
+    catalog:
+      enabled: true
+    kanban:
+      enabled: true
+      groupBy: attributes.lifecycle
+    detail:
+      enabled: true
+    timeline:
+      enabled: true
+      dateField: provenance.capturedAt
+    table:
+      enabled: true
+      columns:
+        - title
+        - attributes.level
+        - attributes.lifecycle
+    graph-placeholder:
+      enabled: true
 
 views:
   - id: concept-periodic
@@ -9,6 +79,7 @@ views:
     taxonomy: categories
     routeTemplate: /categories/{value}
     localView: category-local
+    displayLevel: level-0
     countBy: attributes.categories
     fields:
       - label
@@ -26,6 +97,7 @@ views:
     layout: entry-periodic
     source: entries
     routeTemplate: /categories/{value}
+    displayLevel: level-1
     routeFilter:
       path: attributes.categories
       parameter: value
@@ -45,14 +117,6 @@ views:
         - artifactKind
         - level
       tagsAttribute: tags
-      density: compact
-    detailPanel:
-      sections:
-        - attributes
-        - relationships
-        - documents
-        - actions
-      showAllAttributes: true
 
   - id: catalog
     label: Catalog

@@ -1,4 +1,5 @@
 import { PeriodicElement } from "@/components/home/periodic-element";
+import { resolveTaxonomyDimension } from "@/lib/metadata/taxonomy";
 import type {
   Entry,
   MetadataValue,
@@ -59,9 +60,9 @@ export function VisualHome({
   taxonomy: TaxonomyDefinition;
   view: ViewDefinition;
 }) {
-  const dimension = taxonomy.dimensions.find(
-    (item) => item.id === view.taxonomy
-  );
+  const dimension = view.taxonomy
+    ? resolveTaxonomyDimension(taxonomy, view.taxonomy)
+    : undefined;
 
   if (!dimension) return null;
 

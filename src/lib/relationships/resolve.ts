@@ -4,7 +4,10 @@ import type {
   TaxonomyDefinition,
   TaxonomyOption
 } from "@/types/content";
-import { resolveTaxonomyOption } from "@/lib/metadata/taxonomy";
+import {
+  resolveTaxonomyDimension,
+  resolveTaxonomyOption
+} from "@/lib/metadata/taxonomy";
 
 export interface ResolvedRelationship {
   relationship: Relationship;
@@ -14,9 +17,7 @@ export interface ResolvedRelationship {
 }
 
 export function getRelationshipDimension(taxonomy: TaxonomyDefinition) {
-  return taxonomy.dimensions.find(
-    (dimension) => dimension.id === "relationshipKind"
-  );
+  return resolveTaxonomyDimension(taxonomy, "relationshipKind");
 }
 
 export function resolveOutgoingRelationships(

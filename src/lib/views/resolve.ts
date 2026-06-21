@@ -6,6 +6,10 @@ import type {
   ViewDefinition,
   ViewsDefinition
 } from "@/types/content";
+import {
+  resolveTaxonomyDimension,
+  resolveTaxonomyOption
+} from "@/lib/metadata/taxonomy";
 
 interface RouteMatch {
   option: TaxonomyOption;
@@ -61,9 +65,7 @@ export function getTaxonomyViewRoutes(
       return [];
     }
 
-    const dimension = taxonomy.dimensions.find(
-      (item) => item.id === view.taxonomy
-    );
+    const dimension = resolveTaxonomyDimension(taxonomy, view.taxonomy);
 
     return (dimension?.options ?? []).map((option) =>
       normalizeRoute(
@@ -98,12 +100,10 @@ export function resolveTaxonomyViewRoute(
     if (valueIndex < 0) continue;
 
     const parameter = decodeURIComponent(match[valueIndex + 1]);
-    const dimension = taxonomy.dimensions.find(
-      (item) => item.id === sourceView.taxonomy
-    );
-    const option = dimension?.options.find(
-      (candidate) => candidate.value === parameter
-    );
+    const dimension = resolveTaxonomyDimension(taxonomy, sourceView.taxonomy);
+    const option = dimension
+      ? resolveTaxonomyOption(dimension, parameter)
+      : undefined;
     const localView = views.views.find(
       (candidate) => candidate.id === sourceView.localView
     );

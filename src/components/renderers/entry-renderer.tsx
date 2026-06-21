@@ -4,8 +4,17 @@ import { resolvePresentation } from "@/lib/metadata/resolve";
 import { ValueRenderer } from "@/components/renderers/value-renderer";
 import type { Entry, MetadataValue } from "@/types/content";
 
-export function EntryRenderer({ entry }: { entry: Entry }) {
+export function EntryRenderer({
+  entry,
+  sections: configuredSections
+}: {
+  entry: Entry;
+  sections?: string[];
+}) {
   const presentation = resolvePresentation(entry, getTaxonomy());
+  const sections = new Set(
+    configuredSections ?? ["attributes", "content", "documents"]
+  );
 
   return (
     <article className="space-y-8">
@@ -39,23 +48,28 @@ export function EntryRenderer({ entry }: { entry: Entry }) {
         </div>
       </header>
 
-      {entry.attributes && Object.keys(entry.attributes).length ? (
+      {sections.has("attributes") &&
+      entry.attributes &&
+      Object.keys(entry.attributes).length ? (
         <section className="rounded-lg border p-6">
           <h2 className="mb-4 text-xl font-semibold">Metadata</h2>
           <ValueRenderer value={entry.attributes as MetadataValue} />
         </section>
       ) : null}
 
-      {entry.content?.map((block, index) => (
+      {sections.has("content")
+        ? entry.content?.map((block, index) => (
         <section key={index} className="rounded-lg border p-6">
           {"title" in block && typeof block.title === "string" ? (
             <h2 className="mb-4 text-xl font-semibold">{block.title}</h2>
           ) : null}
           <ValueRenderer value={block} />
         </section>
-      ))}
+          ))
+        : null}
 
-      {entry.documents?.map((reference) => {
+      {sections.has("documents")
+        ? entry.documents?.map((reference) => {
         const document = getDocument(reference.path);
         if (!document) return null;
 
@@ -65,7 +79,8 @@ export function EntryRenderer({ entry }: { entry: Entry }) {
             <ReactMarkdown>{document}</ReactMarkdown>
           </section>
         );
-      })}
+          })
+        : null}
     </article>
   );
 }

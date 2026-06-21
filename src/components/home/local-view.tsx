@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useCallback, useState } from "react";
-import { DetailPanel } from "@/components/home/detail-panel";
-import { MetadataCard } from "@/components/home/metadata-card";
 import { IconToken } from "@/components/metadata/icon-token";
+import { ViewLayout } from "@/components/views/view-layout";
 import type {
   Entry,
   KnowledgeNode,
+  ResolvedViewLayout,
   TaxonomyDefinition,
   TaxonomyOption,
   ViewDefinition
@@ -23,16 +22,16 @@ export function LocalView({
   entries,
   taxonomy,
   view,
-  registry
+  registry,
+  layout
 }: {
   option: TaxonomyOption;
   entries: Entry[];
   taxonomy: TaxonomyDefinition;
   view: ViewDefinition;
   registry: KnowledgeNode[];
+  layout: ResolvedViewLayout;
 }) {
-  const [selectedEntry, setSelectedEntry] = useState<Entry>();
-  const closePanel = useCallback(() => setSelectedEntry(undefined), []);
   const color = option.color ?? "#64748b";
 
   return (
@@ -87,31 +86,20 @@ export function LocalView({
       </header>
 
       {entries.length ? (
-        <div className="local-periodic-grid">
-          {entries.map((entry) => (
-            <MetadataCard
-              key={entry.id}
-              entry={entry}
-              category={option}
-              dimensions={taxonomy.dimensions}
-              view={view}
-              onSelect={setSelectedEntry}
-            />
-          ))}
-        </div>
+        <ViewLayout
+          entries={entries}
+          category={option}
+          taxonomy={taxonomy}
+          view={view}
+          registry={registry}
+          layout={layout}
+        />
       ) : (
         <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
           No child entries are assigned yet.
         </div>
       )}
 
-      <DetailPanel
-        entry={selectedEntry}
-        registry={registry}
-        taxonomy={taxonomy}
-        view={view}
-        onClose={closePanel}
-      />
     </div>
   );
 }

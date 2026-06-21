@@ -110,6 +110,135 @@ validateNavigation(navigation.items);
 
 const viewsPath = path.join(contentRoot, "system", "views.yaml");
 const views = parse(fs.readFileSync(viewsPath, "utf8"));
+const engine = views.viewEngine;
+
+if (!engine?.fallback?.layout) {
+  errors.push(
+    `${relative(viewsPath)}: viewEngine.fallback.layout is required`
+  );
+}
+
+const supportedLayouts = new Set([
+  "periodic",
+  "catalog",
+  "kanban",
+  "detail",
+  "timeline",
+  "table",
+  "graph-placeholder"
+]);
+const configuredLayouts = new Set(Object.keys(engine?.layouts ?? {}));
+
+function validateLayoutReference(field, settings) {
+  if (!settings?.layout) return;
+  if (!supportedLayouts.has(settings.layout)) {
+    errors.push(
+      `${relative(viewsPath)}: ${field} references unsupported layout "${settings.layout}"`
+    );
+  } else if (!configuredLayouts.has(settings.layout)) {
+    errors.push(
+      `${relative(viewsPath)}: ${field} references layout "${settings.layout}" which is not configured in viewEngine.layouts`
+    );
+  }
+}
+
+for (const layout of configuredLayouts) {
+  if (!supportedLayouts.has(layout)) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.layouts contains unsupported layout "${layout}"`
+    );
+  }
+}
+
+validateLayoutReference("viewEngine.fallback", engine?.fallback);
+
+const levelDimensionId = engine?.selectors?.levelAttribute;
+const levelDimension = levelDimensionId
+  ? dimensions.get(levelDimensionId)
+  : undefined;
+if (levelDimensionId && !levelDimension) {
+  errors.push(
+    `${relative(viewsPath)}: viewEngine.selectors.levelAttribute references unknown taxonomy dimension "${levelDimensionId}"`
+  );
+}
+
+for (const [level, settings] of Object.entries(
+  engine?.defaults?.level ?? {}
+)) {
+  if (levelDimension && !levelDimension.values.has(level)) {
+    report(
+      viewsPath,
+      `viewEngine.defaults.level.${level}`,
+      level,
+      levelDimensionId
+    );
+  }
+  validateLayoutReference(`viewEngine.defaults.level.${level}`, settings);
+}
+
+const categoryDimensionId = engine?.selectors?.categoryAttribute;
+const categoryDimension = categoryDimensionId
+  ? dimensions.get(categoryDimensionId)
+  : undefined;
+if (categoryDimensionId && !categoryDimension) {
+  errors.push(
+    `${relative(viewsPath)}: viewEngine.selectors.categoryAttribute references unknown taxonomy dimension "${categoryDimensionId}"`
+  );
+}
+
+const contentCollections = new Set(
+  fs
+    .readdirSync(contentRoot, { withFileTypes: true })
+    .filter((item) => item.isDirectory() && item.name !== "system")
+    .map((item) => item.name)
+);
+const knownCategoryContexts = new Set([
+  ...(categoryDimension?.values ?? []),
+  ...contentCollections
+]);
+
+for (const [category, levels] of Object.entries(
+  engine?.overrides?.categories ?? {}
+)) {
+  if (!knownCategoryContexts.has(category)) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.overrides.categories references unknown category or collection context "${category}"`
+    );
+  }
+  for (const [level, settings] of Object.entries(levels ?? {})) {
+    if (levelDimension && !levelDimension.values.has(level)) {
+      report(
+        viewsPath,
+        `viewEngine.overrides.categories.${category}.${level}`,
+        level,
+        levelDimensionId
+      );
+    }
+    validateLayoutReference(
+      `viewEngine.overrides.categories.${category}.${level}`,
+      settings
+    );
+  }
+}
+
+const nodeIds = new Set();
+for (const directory of ["entries", "sources"]) {
+  for (const filePath of listFiles(path.join(contentRoot, directory), /\.ya?ml$/i)) {
+    const document = parse(fs.readFileSync(filePath, "utf8"));
+    if (typeof document?.id === "string") nodeIds.add(document.id);
+  }
+}
+
+for (const [nodeId, settings] of Object.entries(
+  engine?.overrides?.nodes ?? {}
+)) {
+  if (!nodeIds.has(nodeId)) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.overrides.nodes references unknown node "${nodeId}"`
+    );
+  }
+  validateLayoutReference(`viewEngine.overrides.nodes.${nodeId}`, settings);
+}
 
 for (const view of views.views ?? []) {
   for (const field of [
@@ -123,6 +252,19 @@ for (const view of views.views ?? []) {
         `${relative(viewsPath)}: view "${view.id}" ${field[0]} references unknown taxonomy dimension "${field[1]}"`
       );
     }
+  }
+
+  if (
+    view.displayLevel &&
+    levelDimension &&
+    !levelDimension.values.has(view.displayLevel)
+  ) {
+    report(
+      viewsPath,
+      `view "${view.id}" displayLevel`,
+      view.displayLevel,
+      levelDimensionId
+    );
   }
 
   for (const dimensionId of view.presentation?.badgeDimensions ?? []) {
