@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LocalView } from "@/components/home/local-view";
 import { NodeViewRenderer } from "@/components/views/node-view-renderer";
+import { EntryRenderer } from "@/components/renderers/entry-renderer";
 import { RelatedView } from "@/components/relationships/related-view";
 import {
   getEntries,
@@ -94,6 +95,14 @@ export default async function EntryPage({ params }: PageProps) {
     const view =
       views.views.find((candidate) => candidate.source === "entries") ??
       views.views[0];
+    const categoryAttribute =
+      views.viewEngine.selectors?.categoryAttribute;
+    const categoryView = views.views.find(
+      (candidate) =>
+        candidate.source === "taxonomy" &&
+        candidate.taxonomy === categoryAttribute &&
+        candidate.routeTemplate
+    );
 
     return view ? (
       <NodeViewRenderer
@@ -102,9 +111,16 @@ export default async function EntryPage({ params }: PageProps) {
         taxonomy={taxonomy}
         view={view}
         layout={layout}
-        categoryAttribute={views.viewEngine.selectors?.categoryAttribute}
+        categoryAttribute={categoryAttribute}
+        categoryRouteTemplate={categoryView?.routeTemplate}
         relationshipGraph={views.viewEngine.panels?.relationshipGraph}
         levelDimension={views.viewEngine.selectors?.levelAttribute}
+        selector={views.viewEngine.selector}
+        layouts={views.viewEngine.layouts}
+        breadcrumbs={views.viewEngine.breadcrumbs}
+        detailContent={
+          <EntryRenderer entry={entry} sections={layout.detailSections} />
+        }
       />
     ) : null;
   }
@@ -135,7 +151,10 @@ export default async function EntryPage({ params }: PageProps) {
   });
   const layout = resolveViewLayout(views, {
     level: viewMatch.localView.displayLevel,
-    categories: [viewMatch.parameter]
+    categories: [viewMatch.parameter],
+    settings: {
+      selectorEnabled: viewMatch.localView.selectorEnabled
+    }
   });
 
   return (
@@ -148,6 +167,9 @@ export default async function EntryPage({ params }: PageProps) {
       layout={layout}
       relationshipGraph={views.viewEngine.panels?.relationshipGraph}
       levelDimension={views.viewEngine.selectors?.levelAttribute}
+      selector={views.viewEngine.selector}
+      layouts={views.viewEngine.layouts}
+      breadcrumbs={views.viewEngine.breadcrumbs}
     />
   );
 }

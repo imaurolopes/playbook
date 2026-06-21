@@ -116,6 +116,7 @@ export interface ViewDefinition {
   routeTemplate?: string;
   localView?: string;
   displayLevel?: string;
+  selectorEnabled?: boolean;
   countBy?: string;
   routeFilter?: {
     path: string;
@@ -143,6 +144,8 @@ export interface ViewDefinition {
 
 export interface ViewLayoutSettings {
   layout: string;
+  label?: string;
+  selectorEnabled?: boolean;
   cardDensity?: string;
   enabledPanels?: string[];
   detailSections?: string[];
@@ -162,6 +165,20 @@ export interface RelationshipGraphPanelDefinition {
   defaultState?: string;
   collapsible?: boolean;
   depth?: number;
+}
+
+export interface ViewSelectorDefinition {
+  enabled?: boolean;
+  persistence?: string;
+  parameter?: string;
+  availableLayouts?: string[];
+}
+
+export interface BreadcrumbDefinition {
+  enabled?: boolean;
+  rootLabel?: string;
+  rootRoute?: string;
+  showOn?: string[];
 }
 
 export interface ViewEngineDefinition {
@@ -187,6 +204,8 @@ export interface ViewEngineDefinition {
     relationshipGraph?: RelationshipGraphPanelDefinition;
     [panel: string]: RelationshipGraphPanelDefinition | undefined;
   };
+  selector?: ViewSelectorDefinition;
+  breadcrumbs?: BreadcrumbDefinition;
   layouts?: Record<string, Partial<ViewLayoutSettings> & { enabled?: boolean }>;
 }
 

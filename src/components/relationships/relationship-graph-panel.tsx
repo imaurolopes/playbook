@@ -21,12 +21,14 @@ export function RelationshipGraphPanel({
   roots,
   registry,
   taxonomy,
-  config
+  config,
+  contextTitle
 }: {
   roots: KnowledgeNode[];
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
   config: RelationshipGraphPanelDefinition;
+  contextTitle?: string;
 }) {
   const collapsible = config.collapsible !== false;
   const [state, setState] = useGraphPanelState(
@@ -43,6 +45,9 @@ export function RelationshipGraphPanel({
       ),
     [config.depth, registry, roots, taxonomy]
   );
+  const title =
+    contextTitle ??
+    (roots.length === 1 ? roots[0].title : `${roots.length} items`);
 
   return (
     <section
@@ -50,21 +55,31 @@ export function RelationshipGraphPanel({
       data-panel-state={state}
       className="overflow-hidden rounded-2xl border bg-muted/10"
     >
-      <header className="flex items-center justify-between gap-4 px-4 py-3">
+      <header
+        className={`flex items-center justify-between gap-4 px-4 ${
+          state === "collapsed" ? "py-2" : "py-3"
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg border bg-background text-muted-foreground">
+          <span
+            className={`grid shrink-0 place-items-center rounded-lg border bg-background text-muted-foreground ${
+              state === "collapsed" ? "size-7" : "size-9"
+            }`}
+          >
             <Network className="size-4" />
           </span>
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">Relationship graph</h2>
             <p className="truncate text-xs text-muted-foreground">
-              Incoming and outgoing context · depth {config.depth ?? 1}
+              {state === "collapsed"
+                ? `${model.nodes.length} nodes · ${model.edges.length} relationships`
+                : `${title} · depth ${config.depth ?? 1}`}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
-          {state !== "compact" ? (
+          {state === "expanded" ? (
             <button
               type="button"
               onClick={() => setState("compact")}
@@ -74,7 +89,7 @@ export function RelationshipGraphPanel({
             >
               <Minimize2 className="size-4" />
             </button>
-          ) : (
+          ) : state === "compact" ? (
             <button
               type="button"
               onClick={() => setState("expanded")}
@@ -84,7 +99,7 @@ export function RelationshipGraphPanel({
             >
               <Maximize2 className="size-4" />
             </button>
-          )}
+          ) : null}
           {collapsible ? (
             <button
               type="button"
@@ -111,7 +126,11 @@ export function RelationshipGraphPanel({
 
       {state !== "collapsed" ? (
         <div className="border-t px-4 py-4">
-          <RelationshipGraph model={model} compact={state === "compact"} />
+          <RelationshipGraph
+            model={model}
+            compact={state === "compact"}
+            contextTitle={title}
+          />
         </div>
       ) : null}
     </section>

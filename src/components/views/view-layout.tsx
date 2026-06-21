@@ -5,6 +5,8 @@ import { DetailPanel } from "@/components/home/detail-panel";
 import { MetadataCard } from "@/components/home/metadata-card";
 import { MetadataValueView } from "@/components/home/metadata-value";
 import { ContextualPanels } from "@/components/views/contextual-panels";
+import { useLayoutSelection } from "@/components/views/use-layout-selection";
+import { ViewSelector } from "@/components/views/view-selector";
 import type {
   Entry,
   KnowledgeNode,
@@ -13,7 +15,9 @@ import type {
   ResolvedViewLayout,
   TaxonomyDefinition,
   TaxonomyOption,
-  ViewDefinition
+  ViewDefinition,
+  ViewLayoutSettings,
+  ViewSelectorDefinition
 } from "@/types/content";
 
 function getPath(entry: Entry, path: string): MetadataValue | undefined {
@@ -194,12 +198,24 @@ interface ViewLayoutProps {
   layout: ResolvedViewLayout;
   relationshipGraph?: RelationshipGraphPanelDefinition;
   levelDimension?: string;
+  selector?: ViewSelectorDefinition;
+  layouts?: Record<
+    string,
+    Partial<ViewLayoutSettings> & { enabled?: boolean }
+  >;
+  contextTitle?: string;
 }
 
 export function ViewLayout(props: ViewLayoutProps) {
+  const layouts = props.layouts ?? {};
+  const selection = useLayoutSelection(props.layout, props.selector, layouts);
+  const renderProps = { ...props, layout: selection.layout };
   const [selectedEntry, setSelectedEntry] = useState<Entry>();
   const closePanel = useCallback(() => setSelectedEntry(undefined), []);
-  const detailEnabled = props.layout.enabledPanels?.includes("detail") ?? false;
+  const detailEnabled =
+    selection.layout.enabledPanels?.includes("detail") ?? false;
+  const selectorEnabled =
+    selection.layout.selectorEnabled ?? props.selector?.enabled ?? false;
   const selectEntry = useCallback(
     (entry: Entry) => {
       if (detailEnabled) setSelectedEntry(entry);
@@ -212,22 +228,22 @@ export function ViewLayout(props: ViewLayoutProps) {
   });
 
   let content;
-  switch (props.layout.layout) {
+  switch (selection.layout.layout) {
     case "periodic":
     case "catalog":
-      content = <EntryCards {...props} onSelect={selectEntry} />;
+      content = <EntryCards {...renderProps} onSelect={selectEntry} />;
       break;
     case "kanban":
-      content = <KanbanView {...props} onSelect={selectEntry} />;
+      content = <KanbanView {...renderProps} onSelect={selectEntry} />;
       break;
     case "timeline":
-      content = <TimelineView {...props} />;
+      content = <TimelineView {...renderProps} />;
       break;
     case "table":
-      content = <TableView {...props} />;
+      content = <TableView {...renderProps} />;
       break;
     case "detail":
-      content = <DetailView {...props} />;
+      content = <DetailView {...renderProps} />;
       break;
     case "graph-placeholder":
       content = (
@@ -240,22 +256,33 @@ export function ViewLayout(props: ViewLayoutProps) {
       );
       break;
     default:
-      content = <EntryCards {...props} onSelect={selectEntry} />;
+      content = <EntryCards {...renderProps} onSelect={selectEntry} />;
   }
 
   return (
     <div className="space-y-6">
+      {selectorEnabled ? (
+        <div className="flex justify-end">
+          <ViewSelector
+            available={selection.available}
+            selected={selection.layout.layout}
+            layouts={layouts}
+            onSelect={selection.select}
+          />
+        </div>
+      ) : null}
       <ContextualPanels
         roots={graphRoots}
         registry={props.registry}
         taxonomy={props.taxonomy}
-        layout={props.layout}
+        layout={selection.layout}
         relationshipGraph={props.relationshipGraph}
         levelDimension={props.levelDimension}
+        contextTitle={props.contextTitle}
       />
       <div
-        data-layout={props.layout.layout}
-        data-view-source={props.layout.source}
+        data-layout={selection.layout.layout}
+        data-view-source={selection.layout.source}
       >
         {content}
       </div>
@@ -264,7 +291,7 @@ export function ViewLayout(props: ViewLayoutProps) {
           entry={selectedEntry}
           registry={props.registry}
           taxonomy={props.taxonomy}
-          sections={props.layout.detailSections}
+          sections={selection.layout.detailSections}
           onClose={closePanel}
         />
       ) : null}

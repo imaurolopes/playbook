@@ -11,7 +11,10 @@ export default function HomePage() {
   const activeView =
     views.views.find((view) => view.id === views.defaultView) ?? views.views[0];
   const layout = resolveViewLayout(views, {
-    level: activeView?.displayLevel
+    level: activeView?.displayLevel,
+    settings: {
+      selectorEnabled: activeView?.selectorEnabled
+    }
   });
 
   return activeView ? (
@@ -23,6 +26,8 @@ export default function HomePage() {
       registry={registry}
       relationshipGraph={views.viewEngine.panels?.relationshipGraph}
       levelDimension={views.viewEngine.selectors?.levelAttribute}
+      selector={views.viewEngine.selector}
+      layouts={views.viewEngine.layouts}
     />
   ) : null;
 }

@@ -13,7 +13,8 @@ export function ContextualPanels({
   taxonomy,
   layout,
   relationshipGraph,
-  levelDimension
+  levelDimension,
+  contextTitle
 }: {
   roots: KnowledgeNode[];
   registry: KnowledgeNode[];
@@ -21,6 +22,7 @@ export function ContextualPanels({
   layout: ResolvedViewLayout;
   relationshipGraph?: RelationshipGraphPanelDefinition;
   levelDimension?: string;
+  contextTitle?: string;
 }) {
   if (
     !roots.length ||
@@ -40,6 +42,7 @@ export function ContextualPanels({
       registry={registry}
       taxonomy={taxonomy}
       config={relationshipGraph!}
+      contextTitle={contextTitle}
     />
   );
 }

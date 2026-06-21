@@ -6,6 +6,27 @@ viewEngine:
     levelAttribute: level
     categoryAttribute: categories
 
+  selector:
+    enabled: false
+    persistence: query
+    parameter: view
+    availableLayouts:
+      - catalog
+      - periodic
+      - detail
+      - table
+      - timeline
+      - kanban
+      - graph-placeholder
+
+  breadcrumbs:
+    enabled: true
+    rootLabel: Concept Map
+    rootRoute: /
+    showOn:
+      - local
+      - detail
+
   fallback:
     layout: catalog
     cardDensity: comfortable
@@ -64,27 +85,35 @@ viewEngine:
     nodes:
       architecture-direction:
         layout: detail
+        selectorEnabled: false
 
   layouts:
     periodic:
+      label: Periodic
       enabled: true
     catalog:
+      label: Catalog
       enabled: true
     kanban:
+      label: Kanban
       enabled: true
       groupBy: attributes.lifecycle
     detail:
+      label: Detail
       enabled: true
     timeline:
+      label: Timeline
       enabled: true
       dateField: provenance.capturedAt
     table:
+      label: Table
       enabled: true
       columns:
         - title
         - attributes.level
         - attributes.lifecycle
     graph-placeholder:
+      label: Graph
       enabled: true
 
 views:
@@ -96,6 +125,7 @@ views:
     routeTemplate: /categories/{value}
     localView: category-local
     displayLevel: level-0
+    selectorEnabled: false
     countBy: attributes.categories
     fields:
       - label
@@ -114,6 +144,7 @@ views:
     source: entries
     routeTemplate: /categories/{value}
     displayLevel: level-1
+    selectorEnabled: true
     routeFilter:
       path: attributes.categories
       parameter: value

@@ -11,6 +11,7 @@ export interface ViewResolutionContext {
   level?: string;
   categories?: string[];
   attributes?: Record<string, MetadataValue>;
+  settings?: Partial<ViewLayoutSettings>;
 }
 
 function stringValues(value: MetadataValue | undefined): string[] {
@@ -80,7 +81,8 @@ export function resolveViewLayout(
     ...engine.fallback,
     ...levelDefault,
     ...categoryMatch?.settings,
-    ...nodeOverride
+    ...nodeOverride,
+    ...context.settings
   };
   const source: ResolvedViewLayout["source"] = nodeOverride
     ? "node"

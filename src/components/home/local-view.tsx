@@ -1,17 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { IconToken } from "@/components/metadata/icon-token";
+import { ContextBreadcrumbs } from "@/components/navigation/context-breadcrumbs";
 import { ViewLayout } from "@/components/views/view-layout";
 import type {
   Entry,
+  BreadcrumbDefinition,
   KnowledgeNode,
   RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
   TaxonomyDefinition,
   TaxonomyOption,
-  ViewDefinition
+  ViewDefinition,
+  ViewEngineDefinition,
+  ViewSelectorDefinition
 } from "@/types/content";
 
 function colorWithAlpha(color: string, alpha: string) {
@@ -26,7 +28,10 @@ export function LocalView({
   registry,
   layout,
   relationshipGraph,
-  levelDimension
+  levelDimension,
+  selector,
+  layouts,
+  breadcrumbs
 }: {
   option: TaxonomyOption;
   entries: Entry[];
@@ -36,18 +41,19 @@ export function LocalView({
   layout: ResolvedViewLayout;
   relationshipGraph?: RelationshipGraphPanelDefinition;
   levelDimension?: string;
+  selector?: ViewSelectorDefinition;
+  layouts?: ViewEngineDefinition["layouts"];
+  breadcrumbs?: BreadcrumbDefinition;
 }) {
   const color = option.color ?? "#64748b";
 
   return (
     <div className="space-y-8">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        Back to concept map
-      </Link>
+      <ContextBreadcrumbs
+        config={breadcrumbs}
+        context="local"
+        items={[{ label: option.label }]}
+      />
 
       <header
         className="relative overflow-hidden rounded-3xl border p-7 sm:p-9"
@@ -100,6 +106,9 @@ export function LocalView({
           layout={layout}
           relationshipGraph={relationshipGraph}
           levelDimension={levelDimension}
+          selector={selector}
+          layouts={layouts}
+          contextTitle={option.label}
         />
       ) : (
         <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">

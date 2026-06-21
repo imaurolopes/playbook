@@ -167,6 +167,44 @@ const configuredPanels = new Set([
   ...Object.keys(engine?.panels ?? {})
 ]);
 
+const selector = engine?.selector;
+if (selector) {
+  if (
+    selector.persistence &&
+    !["query", "localStorage"].includes(selector.persistence)
+  ) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.selector.persistence must be query or localStorage`
+    );
+  }
+  if (
+    selector.parameter != null &&
+    (typeof selector.parameter !== "string" || !selector.parameter.trim())
+  ) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.selector.parameter must be a non-empty string`
+    );
+  }
+  for (const layout of selector.availableLayouts ?? []) {
+    if (!configuredLayouts.has(layout)) {
+      errors.push(
+        `${relative(viewsPath)}: viewEngine.selector.availableLayouts references unconfigured layout "${layout}"`
+      );
+    }
+  }
+}
+
+const breadcrumbs = engine?.breadcrumbs;
+if (breadcrumbs?.showOn) {
+  for (const context of breadcrumbs.showOn) {
+    if (!["local", "detail"].includes(context)) {
+      errors.push(
+        `${relative(viewsPath)}: viewEngine.breadcrumbs.showOn references unsupported context "${context}"`
+      );
+    }
+  }
+}
+
 function validatePanels(field, settings) {
   for (const panel of settings?.enabledPanels ?? []) {
     if (!configuredPanels.has(panel)) {
