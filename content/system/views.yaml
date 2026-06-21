@@ -18,6 +18,13 @@ viewEngine:
       - documents
       - actions
 
+  panels:
+    relationshipGraph:
+      enabledFromLevel: level-1
+      defaultState: compact
+      collapsible: true
+      depth: 1
+
   defaults:
     level:
       level-0:
@@ -26,12 +33,21 @@ viewEngine:
       level-1:
         layout: catalog
         cardDensity: compact
+        enabledPanels:
+          - detail
+          - relationshipGraph
       level-2:
         layout: kanban
         cardDensity: compact
+        enabledPanels:
+          - detail
+          - relationshipGraph
       level-3:
         layout: detail
         cardDensity: comfortable
+        enabledPanels:
+          - detail
+          - relationshipGraph
 
   overrides:
     categories:

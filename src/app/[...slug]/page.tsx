@@ -103,6 +103,8 @@ export default async function EntryPage({ params }: PageProps) {
         view={view}
         layout={layout}
         categoryAttribute={views.viewEngine.selectors?.categoryAttribute}
+        relationshipGraph={views.viewEngine.panels?.relationshipGraph}
+        levelDimension={views.viewEngine.selectors?.levelAttribute}
       />
     ) : null;
   }
@@ -144,6 +146,8 @@ export default async function EntryPage({ params }: PageProps) {
       view={viewMatch.localView}
       registry={registry}
       layout={layout}
+      relationshipGraph={views.viewEngine.panels?.relationshipGraph}
+      levelDimension={views.viewEngine.selectors?.levelAttribute}
     />
   );
 }

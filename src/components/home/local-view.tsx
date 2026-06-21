@@ -7,6 +7,7 @@ import { ViewLayout } from "@/components/views/view-layout";
 import type {
   Entry,
   KnowledgeNode,
+  RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
   TaxonomyDefinition,
   TaxonomyOption,
@@ -23,7 +24,9 @@ export function LocalView({
   taxonomy,
   view,
   registry,
-  layout
+  layout,
+  relationshipGraph,
+  levelDimension
 }: {
   option: TaxonomyOption;
   entries: Entry[];
@@ -31,6 +34,8 @@ export function LocalView({
   view: ViewDefinition;
   registry: KnowledgeNode[];
   layout: ResolvedViewLayout;
+  relationshipGraph?: RelationshipGraphPanelDefinition;
+  levelDimension?: string;
 }) {
   const color = option.color ?? "#64748b";
 
@@ -93,6 +98,8 @@ export function LocalView({
           view={view}
           registry={registry}
           layout={layout}
+          relationshipGraph={relationshipGraph}
+          levelDimension={levelDimension}
         />
       ) : (
         <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">

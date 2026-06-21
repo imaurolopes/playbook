@@ -154,6 +154,14 @@ export interface ViewLayoutSettings {
 export interface ResolvedViewLayout extends ViewLayoutSettings {
   source: "node" | "category" | "level" | "fallback";
   matchedCategory?: string;
+  level?: string;
+}
+
+export interface RelationshipGraphPanelDefinition {
+  enabledFromLevel?: string;
+  defaultState?: string;
+  collapsible?: boolean;
+  depth?: number;
 }
 
 export interface ViewEngineDefinition {
@@ -174,6 +182,10 @@ export interface ViewEngineDefinition {
       Record<string, Partial<ViewLayoutSettings>>
     >;
     nodes?: Record<string, Partial<ViewLayoutSettings>>;
+  };
+  panels?: {
+    relationshipGraph?: RelationshipGraphPanelDefinition;
+    [panel: string]: RelationshipGraphPanelDefinition | undefined;
   };
   layouts?: Record<string, Partial<ViewLayoutSettings> & { enabled?: boolean }>;
 }

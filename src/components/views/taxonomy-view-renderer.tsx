@@ -1,6 +1,9 @@
 import { VisualHome } from "@/components/home/visual-home";
+import { ContextualPanels } from "@/components/views/contextual-panels";
 import type {
   Entry,
+  KnowledgeNode,
+  RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
   TaxonomyDefinition,
   ViewDefinition
@@ -10,16 +13,39 @@ export function TaxonomyViewRenderer({
   entries,
   taxonomy,
   view,
-  layout
+  layout,
+  registry,
+  relationshipGraph,
+  levelDimension
 }: {
   entries: Entry[];
   taxonomy: TaxonomyDefinition;
   view: ViewDefinition;
   layout: ResolvedViewLayout;
+  registry: KnowledgeNode[];
+  relationshipGraph?: RelationshipGraphPanelDefinition;
+  levelDimension?: string;
 }) {
+  const graphRoots = entries.flatMap((entry) => {
+    const node = registry.find((candidate) => candidate.id === entry.id);
+    return node ? [node] : [];
+  });
+
   if (layout.layout === "periodic") {
     return (
-      <div data-layout={layout.layout} data-view-source={layout.source}>
+      <div
+        data-layout={layout.layout}
+        data-view-source={layout.source}
+        className="space-y-8"
+      >
+        <ContextualPanels
+          roots={graphRoots}
+          registry={registry}
+          taxonomy={taxonomy}
+          layout={layout}
+          relationshipGraph={relationshipGraph}
+          levelDimension={levelDimension}
+        />
         <VisualHome entries={entries} taxonomy={taxonomy} view={view} />
       </div>
     );

@@ -162,6 +162,58 @@ if (levelDimensionId && !levelDimension) {
   );
 }
 
+const configuredPanels = new Set([
+  "detail",
+  ...Object.keys(engine?.panels ?? {})
+]);
+
+function validatePanels(field, settings) {
+  for (const panel of settings?.enabledPanels ?? []) {
+    if (!configuredPanels.has(panel)) {
+      errors.push(
+        `${relative(viewsPath)}: ${field}.enabledPanels references unknown panel "${panel}"`
+      );
+    }
+  }
+}
+
+validatePanels("viewEngine.fallback", engine?.fallback);
+
+const relationshipGraph = engine?.panels?.relationshipGraph;
+if (relationshipGraph) {
+  if (
+    relationshipGraph.enabledFromLevel &&
+    levelDimension &&
+    !levelDimension.values.has(relationshipGraph.enabledFromLevel)
+  ) {
+    report(
+      viewsPath,
+      "viewEngine.panels.relationshipGraph.enabledFromLevel",
+      relationshipGraph.enabledFromLevel,
+      levelDimensionId
+    );
+  }
+  if (
+    relationshipGraph.defaultState &&
+    !["collapsed", "compact", "expanded"].includes(
+      relationshipGraph.defaultState
+    )
+  ) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.panels.relationshipGraph.defaultState must be collapsed, compact, or expanded`
+    );
+  }
+  if (
+    relationshipGraph.depth != null &&
+    (!Number.isInteger(relationshipGraph.depth) ||
+      relationshipGraph.depth < 1)
+  ) {
+    errors.push(
+      `${relative(viewsPath)}: viewEngine.panels.relationshipGraph.depth must be a positive integer`
+    );
+  }
+}
+
 for (const [level, settings] of Object.entries(
   engine?.defaults?.level ?? {}
 )) {
@@ -174,6 +226,7 @@ for (const [level, settings] of Object.entries(
     );
   }
   validateLayoutReference(`viewEngine.defaults.level.${level}`, settings);
+  validatePanels(`viewEngine.defaults.level.${level}`, settings);
 }
 
 const categoryDimensionId = engine?.selectors?.categoryAttribute;
@@ -218,6 +271,10 @@ for (const [category, levels] of Object.entries(
       `viewEngine.overrides.categories.${category}.${level}`,
       settings
     );
+    validatePanels(
+      `viewEngine.overrides.categories.${category}.${level}`,
+      settings
+    );
   }
 }
 
@@ -238,6 +295,7 @@ for (const [nodeId, settings] of Object.entries(
     );
   }
   validateLayoutReference(`viewEngine.overrides.nodes.${nodeId}`, settings);
+  validatePanels(`viewEngine.overrides.nodes.${nodeId}`, settings);
 }
 
 for (const view of views.views ?? []) {

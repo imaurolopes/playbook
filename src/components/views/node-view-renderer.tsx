@@ -1,5 +1,6 @@
 import { EntryRenderer } from "@/components/renderers/entry-renderer";
 import { ViewLayout } from "@/components/views/view-layout";
+import { ContextualPanels } from "@/components/views/contextual-panels";
 import {
   resolveTaxonomyDimension,
   resolveTaxonomyOption,
@@ -9,6 +10,7 @@ import type {
   Entry,
   KnowledgeNode,
   MetadataValue,
+  RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
   TaxonomyDefinition,
   ViewDefinition
@@ -27,7 +29,9 @@ export function NodeViewRenderer({
   taxonomy,
   view,
   layout,
-  categoryAttribute
+  categoryAttribute,
+  relationshipGraph,
+  levelDimension
 }: {
   entry: Entry;
   registry: KnowledgeNode[];
@@ -35,10 +39,26 @@ export function NodeViewRenderer({
   view: ViewDefinition;
   layout: ResolvedViewLayout;
   categoryAttribute?: string;
+  relationshipGraph?: RelationshipGraphPanelDefinition;
+  levelDimension?: string;
 }) {
+  const root = registry.find((node) => node.id === entry.id);
+
   if (layout.layout === "detail") {
     return (
-      <div data-layout={layout.layout} data-view-source={layout.source}>
+      <div
+        data-layout={layout.layout}
+        data-view-source={layout.source}
+        className="space-y-8"
+      >
+        <ContextualPanels
+          roots={root ? [root] : []}
+          registry={registry}
+          taxonomy={taxonomy}
+          layout={layout}
+          relationshipGraph={relationshipGraph}
+          levelDimension={levelDimension}
+        />
         <EntryRenderer entry={entry} sections={layout.detailSections} />
       </div>
     );
@@ -74,6 +94,8 @@ export function NodeViewRenderer({
         view={view}
         registry={registry}
         layout={layout}
+        relationshipGraph={relationshipGraph}
+        levelDimension={levelDimension}
       />
     </div>
   );

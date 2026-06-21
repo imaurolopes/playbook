@@ -4,10 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 import { DetailPanel } from "@/components/home/detail-panel";
 import { MetadataCard } from "@/components/home/metadata-card";
 import { MetadataValueView } from "@/components/home/metadata-value";
+import { ContextualPanels } from "@/components/views/contextual-panels";
 import type {
   Entry,
   KnowledgeNode,
   MetadataValue,
+  RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
   TaxonomyDefinition,
   TaxonomyOption,
@@ -190,6 +192,8 @@ interface ViewLayoutProps {
   view: ViewDefinition;
   registry: KnowledgeNode[];
   layout: ResolvedViewLayout;
+  relationshipGraph?: RelationshipGraphPanelDefinition;
+  levelDimension?: string;
 }
 
 export function ViewLayout(props: ViewLayoutProps) {
@@ -202,6 +206,10 @@ export function ViewLayout(props: ViewLayoutProps) {
     },
     [detailEnabled]
   );
+  const graphRoots = props.entries.flatMap((entry) => {
+    const node = props.registry.find((candidate) => candidate.id === entry.id);
+    return node ? [node] : [];
+  });
 
   let content;
   switch (props.layout.layout) {
@@ -236,7 +244,15 @@ export function ViewLayout(props: ViewLayoutProps) {
   }
 
   return (
-    <>
+    <div className="space-y-6">
+      <ContextualPanels
+        roots={graphRoots}
+        registry={props.registry}
+        taxonomy={props.taxonomy}
+        layout={props.layout}
+        relationshipGraph={props.relationshipGraph}
+        levelDimension={props.levelDimension}
+      />
       <div
         data-layout={props.layout.layout}
         data-view-source={props.layout.source}
@@ -252,6 +268,6 @@ export function ViewLayout(props: ViewLayoutProps) {
           onClose={closePanel}
         />
       ) : null}
-    </>
+    </div>
   );
 }

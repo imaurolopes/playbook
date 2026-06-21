@@ -95,13 +95,15 @@ export function resolveViewLayout(
     const fallback = withLayoutDefinition(engine, engine.fallback);
     return {
       ...fallback,
-      source: "fallback"
+      source: "fallback",
+      level
     };
   }
 
   return {
     ...resolved,
     source,
-    matchedCategory: categoryMatch?.category
+    matchedCategory: categoryMatch?.category,
+    level
   };
 }
