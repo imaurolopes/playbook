@@ -20,8 +20,10 @@ attributes:
 relationships:
   - type: derived-from
     target: evaluation-test-evidence
-  - type: uses
+  - type: depends-on
     target: delivery-readiness-checklist
+  - type: related-to
+    target: document-checklists-delivery-readiness
 documents:
   - path: checklists/delivery-readiness.md
     label: Delivery readiness guidance

@@ -335,22 +335,112 @@ dimensions:
     options:
       - value: derived-from
         label: Derived From
+        inverse: informs
+        icon: git-branch
+        color: "#64748b"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 10
       - value: informs
         label: Informs
+        inverse: derived-from
+        icon: lightbulb
+        color: "#0284c7"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 20
       - value: supports
         label: Supports
+        icon: badge-check
+        color: "#16a34a"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 30
       - value: challenges
         label: Challenges
+        icon: triangle-alert
+        color: "#dc2626"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 40
       - value: validates
         label: Validates
+        icon: shield-check
+        color: "#059669"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 50
       - value: supersedes
         label: Supersedes
+        icon: replace
+        color: "#d97706"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
         order: 60
       - value: related-to
         label: Related To
+        inverse: related-to
+        icon: link
+        color: "#6366f1"
+        showOnCard: false
+        showInDetail: true
+        navigable: true
         order: 70
+      - value: parent
+        label: Parent
+        inverse: child
+        icon: corner-left-up
+        color: "#475569"
+        showOnCard: false
+        showInDetail: true
+        navigable: true
+        order: 80
+      - value: child
+        label: Child
+        inverse: parent
+        icon: corner-right-down
+        color: "#475569"
+        showOnCard: false
+        showInDetail: true
+        navigable: true
+        order: 90
+      - value: consumes
+        label: Consumes
+        inverse: produces
+        icon: download
+        color: "#7c3aed"
+        showOnCard: false
+        showInDetail: true
+        navigable: true
+        order: 100
+      - value: produces
+        label: Produces
+        inverse: consumes
+        icon: upload
+        color: "#0891b2"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
+        order: 110
+      - value: depends-on
+        label: Depends On
+        icon: blocks
+        color: "#ea580c"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
+        order: 120
+      - value: enables
+        label: Enables
+        icon: zap
+        color: "#ca8a04"
+        showOnCard: true
+        showInDetail: true
+        navigable: true
+        order: 130

@@ -19,7 +19,7 @@ attributes:
     - lineage
   consistencyModel: context-dependent
 relationships:
-  - type: informed-by
+  - type: depends-on
     target: technical-landscape
 actions:
   - label: Open full entry

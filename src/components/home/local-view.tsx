@@ -8,6 +8,7 @@ import { MetadataCard } from "@/components/home/metadata-card";
 import { IconToken } from "@/components/metadata/icon-token";
 import type {
   Entry,
+  KnowledgeNode,
   TaxonomyDefinition,
   TaxonomyOption,
   ViewDefinition
@@ -21,12 +22,14 @@ export function LocalView({
   option,
   entries,
   taxonomy,
-  view
+  view,
+  registry
 }: {
   option: TaxonomyOption;
   entries: Entry[];
   taxonomy: TaxonomyDefinition;
   view: ViewDefinition;
+  registry: KnowledgeNode[];
 }) {
   const [selectedEntry, setSelectedEntry] = useState<Entry>();
   const closePanel = useCallback(() => setSelectedEntry(undefined), []);
@@ -104,7 +107,7 @@ export function LocalView({
 
       <DetailPanel
         entry={selectedEntry}
-        entries={entries}
+        registry={registry}
         taxonomy={taxonomy}
         view={view}
         onClose={closePanel}

@@ -61,6 +61,30 @@ export function MetadataCard({
     ([key]) => !taxonomyKeys.has(key)
   );
   const color = category.color ?? "#64748b";
+  const relationshipDimension = dimensions.find(
+    (dimension) => dimension.id === "relationshipKind"
+  );
+  const relationshipIndicators = (entry.relationships ?? []).reduce<
+    Array<{ type: string; label: string; icon?: string; color?: string; count: number }>
+  >((indicators, relationship) => {
+    const definition = relationshipDimension?.options.find(
+      (option) => option.value === relationship.type
+    );
+    if (!definition?.showOnCard) return indicators;
+    const existing = indicators.find((item) => item.type === relationship.type);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      indicators.push({
+        type: relationship.type,
+        label: definition.label,
+        icon: definition.icon,
+        color: definition.color,
+        count: 1
+      });
+    }
+    return indicators;
+  }, []);
 
   return (
     <button
@@ -139,6 +163,22 @@ export function MetadataCard({
                 className="rounded bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground"
               >
                 {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        {relationshipIndicators.length ? (
+          <div className="flex flex-wrap gap-2 border-t pt-3">
+            {relationshipIndicators.map((indicator) => (
+              <span
+                key={indicator.type}
+                title={`${indicator.label}: ${indicator.count}`}
+                className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
+                style={{ color: indicator.color }}
+              >
+                <IconToken token={indicator.icon} className="size-3" />
+                {indicator.count}
               </span>
             ))}
           </div>

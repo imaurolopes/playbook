@@ -68,6 +68,10 @@ export interface TaxonomyOption {
   parent?: string;
   group?: string;
   order?: number;
+  inverse?: string;
+  showOnCard?: boolean;
+  showInDetail?: boolean;
+  navigable?: boolean;
 }
 
 export interface TaxonomyGroup {
@@ -86,6 +90,16 @@ export interface TaxonomyDimension {
 
 export interface TaxonomyDefinition {
   dimensions: TaxonomyDimension[];
+}
+
+export interface KnowledgeNode {
+  id: string;
+  title: string;
+  summary?: string;
+  collection: string;
+  route?: string;
+  attributes?: Record<string, MetadataValue>;
+  relationships?: Relationship[];
 }
 
 export interface ThemeDefinition {

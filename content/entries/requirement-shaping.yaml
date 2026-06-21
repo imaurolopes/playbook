@@ -18,7 +18,7 @@ attributes:
     - constraints
   outputFormat: testable statements
 relationships:
-  - type: validated-by
+  - type: enables
     target: verification-strategy
 actions:
   - label: Open full entry

@@ -5,8 +5,11 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 import { IconToken } from "@/components/metadata/icon-token";
 import { MetadataValueView } from "@/components/home/metadata-value";
+import { RelationshipSections } from "@/components/relationships/relationship-sections";
+import { resolveOutgoingRelationships } from "@/lib/relationships/resolve";
 import type {
   Entry,
+  KnowledgeNode,
   TaxonomyDefinition,
   ViewDefinition
 } from "@/types/content";
@@ -20,13 +23,13 @@ function humanize(value: string) {
 
 export function DetailPanel({
   entry,
-  entries,
+  registry,
   taxonomy,
   view,
   onClose
 }: {
   entry?: Entry;
-  entries: Entry[];
+  registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
   view: ViewDefinition;
   onClose: () => void;
@@ -48,6 +51,10 @@ export function DetailPanel({
   }, [entry, onClose]);
 
   if (!entry) return null;
+  const node = registry.find((candidate) => candidate.id === entry.id);
+  const relationships = node
+    ? resolveOutgoingRelationships(node, registry, taxonomy)
+    : [];
 
   const sections = new Set(
     view.detailPanel?.sections ?? [
@@ -132,37 +139,10 @@ export function DetailPanel({
           {sections.has("relationships") ? (
             <section>
               <h3 className="detail-heading">Relationships</h3>
-              {entry.relationships?.length ? (
-                <div className="space-y-2">
-                  {entry.relationships.map((relationship, index) => {
-                    const target = entries.find(
-                      (candidate) => candidate.id === relationship.target
-                    );
-                    const body = (
-                      <div className="rounded-lg border bg-muted/30 p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {humanize(relationship.type)}
-                        </p>
-                        <p className="mt-1 text-sm font-medium">
-                          {target?.title ?? relationship.target}
-                        </p>
-                      </div>
-                    );
-
-                    return target ? (
-                      <Link key={index} href={target.route} onClick={onClose}>
-                        {body}
-                      </Link>
-                    ) : (
-                      <div key={index}>{body}</div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No relationships defined.
-                </p>
-              )}
+              <RelationshipSections
+                relationships={relationships}
+                onNavigate={onClose}
+              />
             </section>
           ) : null}
 
@@ -197,6 +177,14 @@ export function DetailPanel({
         {sections.has("actions") ? (
           <footer className="border-t bg-muted/20 p-4">
             <div className="flex flex-wrap justify-end gap-2">
+              <Link
+                href={`/related/${encodeURIComponent(entry.id)}`}
+                onClick={onClose}
+                className="panel-action-secondary"
+              >
+                Open related view
+                <IconToken token="git-branch" className="size-4" />
+              </Link>
               {entry.actions?.map((action) => (
                 <Link
                   key={`${action.label}-${action.href}`}

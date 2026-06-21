@@ -21,7 +21,7 @@ attributes:
 relationships:
   - type: derived-from
     target: discussion-architecture-boundaries
-  - type: demonstrated-by
+  - type: related-to
     target: static-delivery-decision
 actions:
   - label: Open full entry

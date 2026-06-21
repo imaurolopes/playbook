@@ -18,6 +18,8 @@ attributes:
 relationships:
   - type: informs
     target: static-delivery-decision
+  - type: related-to
+    target: document-discovery-starter-guide
 content:
   - kind: prompts
     title: Initial prompts

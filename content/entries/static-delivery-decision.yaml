@@ -14,9 +14,9 @@ attributes:
   artifactKind: decision-record
   decision: Static export hosted by GitHub Pages
 relationships:
-  - type: informed-by
+  - type: derived-from
     target: discovery-starter
-  - type: validated-by
+  - type: related-to
     target: delivery-readiness-checklist
 content:
   - kind: context

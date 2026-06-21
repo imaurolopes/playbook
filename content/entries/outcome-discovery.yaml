@@ -21,7 +21,7 @@ attributes:
     - outcome statement
     - evidence backlog
 relationships:
-  - type: expands-to
+  - type: enables
     target: discovery-starter
 documents:
   - path: discovery/starter-guide.md
