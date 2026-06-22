@@ -15,12 +15,14 @@ function NavigationItems({
   items,
   expanded,
   depth = 0,
-  onNavigate
+  onNavigate,
+  onAction
 }: {
   items: NavigationNode[];
   expanded: boolean;
   depth?: number;
   onNavigate?: () => void;
+  onAction?: (action: string) => void;
 }) {
   const pathname = usePathname();
 
@@ -29,7 +31,7 @@ function NavigationItems({
       {items.map((item, index) => {
         const active = isActiveRoute(pathname, item.route);
         const hasChildren = Boolean(item.children?.length);
-        const isSection = !item.route;
+        const isSection = !item.route && !item.action;
 
         if (!expanded && isSection) {
           if (!item.icon) return null;
@@ -80,6 +82,28 @@ function NavigationItems({
                   <span className="sidebar-tooltip">{item.label}</span>
                 ) : null}
               </div>
+            ) : item.action ? (
+              <div className="group relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAction?.(item.action!);
+                    onNavigate?.();
+                  }}
+                  title={!expanded ? item.label : undefined}
+                  className={`flex min-h-10 w-full items-center rounded-lg text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground ${
+                    expanded ? "gap-3 px-3" : "justify-center px-0"
+                  }`}
+                >
+                  <IconToken token={item.icon} className="size-4 shrink-0" />
+                  {expanded ? (
+                    <span className="min-w-0 truncate">{item.label}</span>
+                  ) : null}
+                </button>
+                {!expanded ? (
+                  <span className="sidebar-tooltip">{item.label}</span>
+                ) : null}
+              </div>
             ) : (
               <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <span className="flex items-center gap-2">
@@ -98,6 +122,7 @@ function NavigationItems({
                   expanded={expanded}
                   depth={depth + 1}
                   onNavigate={onNavigate}
+                  onAction={onAction}
                 />
               </div>
             ) : null}
@@ -111,11 +136,13 @@ function NavigationItems({
 export function SidebarNavigation({
   items,
   expanded,
-  onNavigate
+  onNavigate,
+  onAction
 }: {
   items: NavigationNode[];
   expanded: boolean;
   onNavigate?: () => void;
+  onAction?: (action: string) => void;
 }) {
   return (
     <nav aria-label="Primary navigation">
@@ -123,6 +150,7 @@ export function SidebarNavigation({
         items={items}
         expanded={expanded}
         onNavigate={onNavigate}
+        onAction={onAction}
       />
     </nav>
   );

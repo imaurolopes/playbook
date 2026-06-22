@@ -1,0 +1,36 @@
+schemaVersion: "1"
+shortcut: k
+maxResults: 12
+placeholder: Search knowledge, projects, sources, and outputs...
+emptyMessage: No matching Playbook items.
+
+fields:
+  title: 100
+  summary: 45
+  tags: 40
+  categories: 35
+  artifactKind: 30
+  lifecycle: 20
+  relationships: 15
+
+collections:
+  entries:
+    label: Knowledge
+    icon: library
+    color: "#4f46e5"
+  sources:
+    label: Source
+    icon: archive
+    color: "#64748b"
+  projects:
+    label: Project Workspace
+    icon: folder-kanban
+    color: "#2563eb"
+  project-outputs:
+    label: Project Output
+    icon: folder-output
+    color: "#d97706"
+  documents:
+    label: Document
+    icon: file-text
+    color: "#475569"

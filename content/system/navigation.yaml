@@ -6,6 +6,10 @@ items:
     icon: house
     route: /
 
+  - label: Search
+    icon: search
+    action: search
+
   - label: Projects
     icon: folder-kanban
     route: /projects

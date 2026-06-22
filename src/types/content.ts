@@ -110,6 +110,7 @@ export interface NavigationNode {
   icon?: string;
   entry?: string;
   route?: string;
+  action?: string;
   source?: string;
   taxonomy?: string;
   hierarchy?: string;
@@ -333,4 +334,59 @@ export interface SchemasDefinition {
   schemaVersion: string;
   schemas: ContentSchemaDefinition[];
   definitions?: Record<string, SchemaDefinition>;
+}
+
+export interface SearchFieldWeights {
+  title: number;
+  summary: number;
+  tags: number;
+  categories: number;
+  artifactKind: number;
+  lifecycle: number;
+  relationships: number;
+}
+
+export interface SearchDefinition {
+  shortcut?: string;
+  maxResults?: number;
+  placeholder?: string;
+  emptyMessage?: string;
+  fields: SearchFieldWeights;
+  collections?: Record<
+    string,
+    {
+      label: string;
+      icon?: string;
+      color?: string;
+    }
+  >;
+}
+
+export interface SearchBadge {
+  value: string;
+  label: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface SearchIndexItem {
+  id: string;
+  title: string;
+  summary?: string;
+  route: string;
+  collection: string;
+  typeLabel: string;
+  typeIcon?: string;
+  typeColor?: string;
+  categories: SearchBadge[];
+  lifecycle?: SearchBadge;
+  search: {
+    title: string;
+    summary: string;
+    tags: string;
+    categories: string;
+    artifactKind: string;
+    lifecycle: string;
+    relationships: string;
+  };
 }

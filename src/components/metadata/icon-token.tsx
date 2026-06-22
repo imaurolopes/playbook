@@ -1,5 +1,6 @@
 import {
   Activity,
+  Archive,
   ArrowUpRight,
   BadgeCheck,
   Blocks,
@@ -20,6 +21,7 @@ import {
   Database,
   Download,
   FileBox,
+  FileText,
   FlaskConical,
   FolderKanban,
   FolderOutput,
@@ -58,6 +60,7 @@ import {
 
 const iconTokens: Record<string, LucideIcon> = {
   activity: Activity,
+  archive: Archive,
   "arrow-up-right": ArrowUpRight,
   "badge-check": BadgeCheck,
   blocks: Blocks,
@@ -78,6 +81,7 @@ const iconTokens: Record<string, LucideIcon> = {
   database: Database,
   download: Download,
   "file-box": FileBox,
+  "file-text": FileText,
   "flask-conical": FlaskConical,
   "folder-kanban": FolderKanban,
   "folder-output": FolderOutput,

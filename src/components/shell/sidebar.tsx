@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { IconToken } from "@/components/metadata/icon-token";
+import { CommandPalette } from "@/components/search/command-palette";
 import { SidebarNavigation } from "@/components/shell/sidebar-navigation";
 import { SidebarToggle } from "@/components/shell/sidebar-toggle";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useSidebarState } from "@/components/shell/use-sidebar-state";
-import type { NavigationNode } from "@/types/content";
+import type {
+  NavigationNode,
+  SearchDefinition,
+  SearchIndexItem
+} from "@/types/content";
 
 function SidebarBody({
   title,
@@ -16,6 +21,7 @@ function SidebarBody({
   expanded,
   onToggle,
   onNavigate,
+  onAction,
   mobile = false
 }: {
   title: string;
@@ -23,6 +29,7 @@ function SidebarBody({
   expanded: boolean;
   onToggle?: () => void;
   onNavigate?: () => void;
+  onAction?: (action: string) => void;
   mobile?: boolean;
 }) {
   return (
@@ -75,6 +82,7 @@ function SidebarBody({
           items={items}
           expanded={expanded}
           onNavigate={onNavigate}
+          onAction={onAction}
         />
       </div>
 
@@ -92,13 +100,22 @@ function SidebarBody({
 export function SidebarShell({
   title,
   items,
+  searchIndex,
+  search,
   children
 }: {
   title: string;
   items: NavigationNode[];
+  searchIndex: SearchIndexItem[];
+  search: SearchDefinition;
   children: ReactNode;
 }) {
   const sidebar = useSidebarState();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const actions: Record<string, () => void> = {
+    search: () => setSearchOpen(true)
+  };
+  const runAction = (action: string) => actions[action]?.();
 
   return (
     <div
@@ -117,6 +134,7 @@ export function SidebarShell({
           items={items}
           expanded={sidebar.expanded}
           onToggle={sidebar.toggle}
+          onAction={runAction}
         />
       </aside>
 
@@ -150,6 +168,7 @@ export function SidebarShell({
               expanded
               mobile
               onNavigate={sidebar.closeMobile}
+              onAction={runAction}
             />
           </aside>
         </div>
@@ -164,6 +183,12 @@ export function SidebarShell({
           {children}
         </main>
       </div>
+      <CommandPalette
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        index={searchIndex}
+        definition={search}
+      />
     </div>
   );
 }

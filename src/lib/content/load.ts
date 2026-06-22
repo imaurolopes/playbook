@@ -6,6 +6,7 @@ import type {
   NavigationDefinition,
   ProjectOutput,
   ProjectWorkspace,
+  SearchDefinition,
   SchemasDefinition,
   TaxonomyDefinition,
   ThemeDefinition,
@@ -90,6 +91,10 @@ export function getSchemas(): SchemasDefinition {
 
 export function getTheme(): ThemeDefinition {
   return readYaml<ThemeDefinition>("system/themes.yaml");
+}
+
+export function getSearch(): SearchDefinition {
+  return readYaml<SearchDefinition>("system/search.yaml");
 }
 
 export function getDocument(relativePath: string): string | undefined {

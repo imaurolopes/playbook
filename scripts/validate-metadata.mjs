@@ -175,6 +175,57 @@ function validateNavigation(items) {
 
 validateNavigation(navigation.items);
 
+const searchPath = path.join(contentRoot, "system", "search.yaml");
+const search = parse(fs.readFileSync(searchPath, "utf8"));
+const requiredSearchFields = [
+  "title",
+  "summary",
+  "tags",
+  "categories",
+  "artifactKind",
+  "lifecycle",
+  "relationships"
+];
+
+for (const field of requiredSearchFields) {
+  const weight = search.fields?.[field];
+  if (typeof weight !== "number" || weight < 0) {
+    errors.push(
+      `${relative(searchPath)}: fields.${field} must be a non-negative number`
+    );
+  }
+}
+if (
+  search.maxResults != null &&
+  (!Number.isInteger(search.maxResults) || search.maxResults < 1)
+) {
+  errors.push(
+    `${relative(searchPath)}: maxResults must be a positive integer`
+  );
+}
+if (
+  search.shortcut != null &&
+  (typeof search.shortcut !== "string" || search.shortcut.length !== 1)
+) {
+  errors.push(
+    `${relative(searchPath)}: shortcut must be a single character`
+  );
+}
+for (const [collection, presentation] of Object.entries(
+  search.collections ?? {}
+)) {
+  if (
+    !presentation ||
+    typeof presentation !== "object" ||
+    typeof presentation.label !== "string" ||
+    !presentation.label.trim()
+  ) {
+    errors.push(
+      `${relative(searchPath)}: collections.${collection}.label must be a non-empty string`
+    );
+  }
+}
+
 const viewsPath = path.join(contentRoot, "system", "views.yaml");
 const views = parse(fs.readFileSync(viewsPath, "utf8"));
 const engine = views.viewEngine;
