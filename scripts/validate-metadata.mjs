@@ -322,6 +322,74 @@ for (const [index, section] of governanceSections.entries()) {
   }
 }
 
+const relationshipExplorerPath = path.join(
+  contentRoot,
+  "system",
+  "relationship-explorer.yaml"
+);
+const relationshipExplorer = parse(
+  fs.readFileSync(relationshipExplorerPath, "utf8")
+);
+const supportedRelationshipFilters = new Set([
+  "relationshipType",
+  "sourceCollection",
+  "targetCollection",
+  "category",
+  "lifecycle",
+  "artifactKind",
+  "project",
+  "confidence",
+  "evidenceLevel"
+]);
+const supportedRelationshipViews = new Set([
+  "table",
+  "relationship-type",
+  "source",
+  "target",
+  "impact"
+]);
+const configuredRelationshipViews = new Set();
+for (const [index, filter] of (relationshipExplorer.filters ?? []).entries()) {
+  if (!supportedRelationshipFilters.has(filter.id)) {
+    errors.push(
+      `${relative(relationshipExplorerPath)}: filters[${index}] references unsupported filter "${filter.id}"`
+    );
+  }
+}
+for (const [index, view] of (relationshipExplorer.views ?? []).entries()) {
+  if (!supportedRelationshipViews.has(view.id)) {
+    errors.push(
+      `${relative(relationshipExplorerPath)}: views[${index}] references unsupported view "${view.id}"`
+    );
+  }
+  configuredRelationshipViews.add(view.id);
+}
+if (!configuredRelationshipViews.has(relationshipExplorer.defaultView)) {
+  errors.push(
+    `${relative(relationshipExplorerPath)}: defaultView references unconfigured view "${relationshipExplorer.defaultView}"`
+  );
+}
+const relationshipKinds = dimensions.get("relationshipKind");
+for (const [groupIndex, group] of (
+  relationshipExplorer.impact?.groups ?? []
+).entries()) {
+  if (!["incoming", "outgoing"].includes(group.direction)) {
+    errors.push(
+      `${relative(relationshipExplorerPath)}: impact.groups[${groupIndex}].direction must be incoming or outgoing`
+    );
+  }
+  for (const type of group.relationshipTypes ?? []) {
+    if (!relationshipKinds?.values.has(type)) {
+      report(
+        relationshipExplorerPath,
+        `impact.groups[${groupIndex}].relationshipTypes`,
+        type,
+        "relationshipKind"
+      );
+    }
+  }
+}
+
 const viewsPath = path.join(contentRoot, "system", "views.yaml");
 const views = parse(fs.readFileSync(viewsPath, "utf8"));
 const engine = views.viewEngine;

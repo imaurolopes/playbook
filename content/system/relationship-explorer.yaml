@@ -1,0 +1,91 @@
+schemaVersion: "1"
+defaultView: table
+
+filters:
+  - id: relationshipType
+    label: Relationship type
+  - id: sourceCollection
+    label: Source collection
+  - id: targetCollection
+    label: Target collection
+  - id: category
+    label: Category
+  - id: lifecycle
+    label: Lifecycle
+  - id: artifactKind
+    label: Artifact kind
+  - id: project
+    label: Project
+  - id: confidence
+    label: Confidence
+  - id: evidenceLevel
+    label: Evidence level
+
+views:
+  - id: table
+    label: Table
+    icon: table-properties
+  - id: relationship-type
+    label: By relationship type
+    icon: git-branch
+  - id: source
+    label: By source node
+    icon: corner-right-down
+  - id: target
+    label: By target node
+    icon: corner-left-up
+  - id: impact
+    label: Impact
+    icon: network
+
+impact:
+  groups:
+    - id: dependents
+      label: What depends on this?
+      direction: incoming
+      relationshipTypes:
+        - depends-on
+    - id: dependencies
+      label: What does this depend on?
+      direction: outgoing
+      relationshipTypes:
+        - depends-on
+        - consumes
+    - id: produces
+      label: What does this produce?
+      direction: outgoing
+      relationshipTypes:
+        - produces
+    - id: supports
+      label: What does this support?
+      direction: outgoing
+      relationshipTypes:
+        - supports
+        - enables
+    - id: derived
+      label: What is derived from this?
+      direction: incoming
+      relationshipTypes:
+        - derived-from
+
+collections:
+  entries:
+    label: Knowledge
+    icon: library
+    color: "#4f46e5"
+  sources:
+    label: Source
+    icon: archive
+    color: "#64748b"
+  documents:
+    label: Document
+    icon: file-text
+    color: "#475569"
+  projects:
+    label: Project Workspace
+    icon: folder-kanban
+    color: "#2563eb"
+  project-outputs:
+    label: Project Output
+    icon: folder-output
+    color: "#d97706"

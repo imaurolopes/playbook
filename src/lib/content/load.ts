@@ -7,6 +7,7 @@ import type {
   NavigationDefinition,
   ProjectOutput,
   ProjectWorkspace,
+  RelationshipExplorerDefinition,
   SearchDefinition,
   SchemasDefinition,
   TaxonomyDefinition,
@@ -100,6 +101,12 @@ export function getSearch(): SearchDefinition {
 
 export function getGovernance(): GovernanceDefinition {
   return readYaml<GovernanceDefinition>("system/governance.yaml");
+}
+
+export function getRelationshipExplorer(): RelationshipExplorerDefinition {
+  return readYaml<RelationshipExplorerDefinition>(
+    "system/relationship-explorer.yaml"
+  );
 }
 
 export function getDocument(relativePath: string): string | undefined {

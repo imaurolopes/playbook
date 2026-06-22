@@ -18,6 +18,10 @@ items:
     icon: shield-check
     route: /governance
 
+  - label: Relationship Explorer
+    icon: network
+    route: /relationships
+
   - label: New Item
     icon: copy
     route: /authoring/new

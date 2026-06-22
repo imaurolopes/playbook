@@ -452,3 +452,67 @@ export interface GovernanceIndexItem {
   missingOwner: boolean;
   recentlyApproved: boolean;
 }
+
+export interface RelationshipExplorerFilterDefinition {
+  id: string;
+  label: string;
+}
+
+export interface RelationshipExplorerViewDefinition {
+  id: string;
+  label: string;
+  icon?: string;
+}
+
+export interface RelationshipImpactGroupDefinition {
+  id: string;
+  label: string;
+  direction: "incoming" | "outgoing";
+  relationshipTypes: string[];
+}
+
+export interface RelationshipExplorerDefinition {
+  defaultView: string;
+  filters: RelationshipExplorerFilterDefinition[];
+  views: RelationshipExplorerViewDefinition[];
+  impact: {
+    groups: RelationshipImpactGroupDefinition[];
+  };
+  collections?: Record<
+    string,
+    {
+      label: string;
+      icon?: string;
+      color?: string;
+    }
+  >;
+}
+
+export interface RelationshipEndpointIndex {
+  id: string;
+  title: string;
+  summary?: string;
+  route?: string;
+  relatedRoute: string;
+  collection: string;
+  collectionLabel: string;
+  collectionIcon?: string;
+  collectionColor?: string;
+  categories: string[];
+  lifecycle?: string;
+  artifactKind?: string;
+  project?: string;
+  confidence?: string;
+  evidenceLevel?: string;
+}
+
+export interface RelationshipEdgeIndex {
+  id: string;
+  type: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  order: number;
+  source: RelationshipEndpointIndex;
+  target: RelationshipEndpointIndex;
+}
