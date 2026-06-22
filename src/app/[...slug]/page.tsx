@@ -9,6 +9,7 @@ import { RelatedView } from "@/components/relationships/related-view";
 import {
   getEntries,
   getEntryByRoute,
+  getGovernance,
   getTaxonomy,
   getViews
 } from "@/lib/content/load";
@@ -88,6 +89,7 @@ export default async function EntryPage({ params }: PageProps) {
   const views = getViews();
   const taxonomy = getTaxonomy();
   const registry = getKnowledgeRegistry();
+  const governance = getGovernance();
 
   if (entry) {
     const layout = resolveViewLayout(views, {
@@ -120,6 +122,7 @@ export default async function EntryPage({ params }: PageProps) {
         selector={views.viewEngine.selector}
         layouts={views.viewEngine.layouts}
         breadcrumbs={views.viewEngine.breadcrumbs}
+        governance={governance}
         detailContent={
           layout.layout === "skill" ? (
             <SkillRenderer
@@ -127,6 +130,7 @@ export default async function EntryPage({ params }: PageProps) {
               registry={registry}
               taxonomy={taxonomy}
               sections={layout.detailSections}
+              governance={governance}
             />
           ) : layout.layout === "artifact" ? (
             <ArtifactRenderer
@@ -134,9 +138,14 @@ export default async function EntryPage({ params }: PageProps) {
               registry={registry}
               taxonomy={taxonomy}
               sections={layout.detailSections}
+              governance={governance}
             />
           ) : (
-            <EntryRenderer entry={entry} sections={layout.detailSections} />
+            <EntryRenderer
+              entry={entry}
+              sections={layout.detailSections}
+              governance={governance}
+            />
           )
         }
       />
@@ -157,6 +166,7 @@ export default async function EntryPage({ params }: PageProps) {
         node={relatedNode}
         registry={registry}
         taxonomy={taxonomy}
+        governance={governance}
       />
     );
   }
@@ -188,6 +198,7 @@ export default async function EntryPage({ params }: PageProps) {
       selector={views.viewEngine.selector}
       layouts={views.viewEngine.layouts}
       breadcrumbs={views.viewEngine.breadcrumbs}
+      governance={governance}
     />
   );
 }

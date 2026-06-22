@@ -3,6 +3,7 @@ import path from "node:path";
 import { parse } from "yaml";
 import type {
   Entry,
+  GovernanceMetadata,
   KnowledgeNode,
   MetadataValue,
   ProjectOutput,
@@ -24,6 +25,7 @@ interface GenericRecord {
   summary?: string;
   attributes?: Record<string, MetadataValue>;
   relationships?: Relationship[];
+  governance?: GovernanceMetadata;
   supportingMaterials?: Array<{
     locator: string;
     label?: string;
@@ -37,6 +39,7 @@ interface DocumentMetadata {
   summary?: string;
   attributes?: Record<string, MetadataValue>;
   relationships?: Relationship[];
+  governance?: GovernanceMetadata;
 }
 
 function listFiles(directory: string, pattern: RegExp): string[] {
@@ -139,7 +142,8 @@ function getDocumentNodes(
           ...(metadata.attributes ?? {}),
           path: relativePath
         },
-        relationships: metadata.relationships ?? []
+        relationships: metadata.relationships ?? [],
+        governance: metadata.governance
       }
     ];
   });
@@ -153,7 +157,8 @@ function entryNode(entry: Entry): KnowledgeNode {
     collection: "entries",
     route: entry.route,
     attributes: entry.attributes,
-    relationships: entry.relationships
+    relationships: entry.relationships,
+    governance: entry.governance
   };
 }
 
@@ -165,7 +170,8 @@ function sourceNode(source: GenericRecord): KnowledgeNode {
     collection: "sources",
     route: `/related/${encodeURIComponent(source.id)}`,
     attributes: source.attributes,
-    relationships: source.relationships
+    relationships: source.relationships,
+    governance: source.governance
   };
 }
 
@@ -182,7 +188,8 @@ function projectNode(project: ProjectWorkspace): KnowledgeNode {
       lifecycle: project.lifecycle,
       categories: project.categories ?? []
     },
-    relationships: project.relationships
+    relationships: project.relationships,
+    governance: project.governance
   };
 }
 
@@ -197,7 +204,8 @@ function projectOutputNode(output: ProjectOutput): KnowledgeNode {
       ...(output.attributes ?? {}),
       project: output.project
     },
-    relationships: output.relationships
+    relationships: output.relationships,
+    governance: output.governance
   };
 }
 

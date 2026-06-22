@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconToken } from "@/components/metadata/icon-token";
 import { MetadataValueView } from "@/components/home/metadata-value";
+import { GovernanceSection } from "@/components/governance/governance-section";
 import { ContextBreadcrumbs } from "@/components/navigation/context-breadcrumbs";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
 import { ContextualPanels } from "@/components/views/contextual-panels";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/relationships/resolve";
 import type {
   BreadcrumbDefinition,
+  GovernanceDefinition,
   KnowledgeNode,
   MetadataValue,
   ProjectOutput,
@@ -99,7 +101,8 @@ export function ProjectWorkspaceRenderer({
   layout,
   relationshipGraph,
   levelDimension,
-  breadcrumbs
+  breadcrumbs,
+  governance
 }: {
   project: ProjectWorkspace;
   outputs: ProjectOutput[];
@@ -109,6 +112,7 @@ export function ProjectWorkspaceRenderer({
   relationshipGraph?: RelationshipGraphPanelDefinition;
   levelDimension?: string;
   breadcrumbs?: BreadcrumbDefinition;
+  governance: GovernanceDefinition;
 }) {
   const root = registry.find((node) => node.id === project.id);
   const status = resolveTaxonomyOption(
@@ -144,6 +148,16 @@ export function ProjectWorkspaceRenderer({
             ))}
           </div>
         ) : null}
+      </Section>
+    ),
+    governance: (
+      <Section title="Governance">
+        <GovernanceSection
+          governance={project.governance}
+          lifecycle={project.lifecycle}
+          taxonomy={taxonomy}
+          definition={governance}
+        />
       </Section>
     ),
     status: (

@@ -6,6 +6,7 @@ import { ViewLayout } from "@/components/views/view-layout";
 import type {
   Entry,
   BreadcrumbDefinition,
+  GovernanceDefinition,
   KnowledgeNode,
   RelationshipGraphPanelDefinition,
   ResolvedViewLayout,
@@ -31,7 +32,8 @@ export function LocalView({
   levelDimension,
   selector,
   layouts,
-  breadcrumbs
+  breadcrumbs,
+  governance
 }: {
   option: TaxonomyOption;
   entries: Entry[];
@@ -44,6 +46,7 @@ export function LocalView({
   selector?: ViewSelectorDefinition;
   layouts?: ViewEngineDefinition["layouts"];
   breadcrumbs?: BreadcrumbDefinition;
+  governance: GovernanceDefinition;
 }) {
   const color = option.color ?? "#64748b";
 
@@ -109,6 +112,7 @@ export function LocalView({
           selector={selector}
           layouts={layouts}
           contextTitle={option.label}
+          governance={governance}
         />
       ) : (
         <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">

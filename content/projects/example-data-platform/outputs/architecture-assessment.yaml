@@ -31,3 +31,13 @@ relationships:
     target: architecture-assessment-template
   - type: derived-from
     target: batch-vs-streaming-matrix
+governance:
+  owner: platform-architecture
+  reviewers:
+    - architecture-practice
+  lastReviewedAt: "2026-06-18"
+  nextReviewAt: "2026-07-18"
+  qualityScore: 79
+  completenessScore: 64
+  confidence: medium
+  evidenceLevel: moderate

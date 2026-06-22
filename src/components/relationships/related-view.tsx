@@ -2,21 +2,28 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { IconToken } from "@/components/metadata/icon-token";
 import { MetadataValueView } from "@/components/home/metadata-value";
+import { GovernanceSection } from "@/components/governance/governance-section";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
 import {
   resolveIncomingRelationships,
   resolveOutgoingRelationships
 } from "@/lib/relationships/resolve";
-import type { KnowledgeNode, TaxonomyDefinition } from "@/types/content";
+import type {
+  GovernanceDefinition,
+  KnowledgeNode,
+  TaxonomyDefinition
+} from "@/types/content";
 
 export function RelatedView({
   node,
   registry,
-  taxonomy
+  taxonomy,
+  governance
 }: {
   node: KnowledgeNode;
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
+  governance: GovernanceDefinition;
 }) {
   const outgoing = resolveOutgoingRelationships(node, registry, taxonomy);
   const incoming = resolveIncomingRelationships(node, registry, taxonomy);
@@ -88,6 +95,20 @@ export function RelatedView({
           <MetadataValueView value={node.attributes} />
         </section>
       ) : null}
+
+      <section className="rounded-2xl border p-5 sm:p-6">
+        <h2 className="mb-5 text-lg font-semibold">Governance</h2>
+        <GovernanceSection
+          governance={node.governance}
+          lifecycle={
+            typeof node.attributes?.lifecycle === "string"
+              ? node.attributes.lifecycle
+              : undefined
+          }
+          taxonomy={taxonomy}
+          definition={governance}
+        />
+      </section>
     </div>
   );
 }

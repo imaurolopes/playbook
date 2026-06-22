@@ -2,18 +2,25 @@ import ReactMarkdown from "react-markdown";
 import { getDocument, getTaxonomy } from "@/lib/content/load";
 import { resolvePresentation } from "@/lib/metadata/resolve";
 import { ValueRenderer } from "@/components/renderers/value-renderer";
-import type { Entry, MetadataValue } from "@/types/content";
+import { GovernanceSection } from "@/components/governance/governance-section";
+import type {
+  Entry,
+  GovernanceDefinition,
+  MetadataValue
+} from "@/types/content";
 
 export function EntryRenderer({
   entry,
-  sections: configuredSections
+  sections: configuredSections,
+  governance
 }: {
   entry: Entry;
   sections?: string[];
+  governance: GovernanceDefinition;
 }) {
   const presentation = resolvePresentation(entry, getTaxonomy());
   const sections = new Set(
-    configuredSections ?? ["attributes", "content", "documents"]
+    configuredSections ?? ["attributes", "governance", "content", "documents"]
   );
 
   return (
@@ -54,6 +61,22 @@ export function EntryRenderer({
         <section className="rounded-lg border p-6">
           <h2 className="mb-4 text-xl font-semibold">Metadata</h2>
           <ValueRenderer value={entry.attributes as MetadataValue} />
+        </section>
+      ) : null}
+
+      {sections.has("governance") ? (
+        <section className="rounded-lg border p-6">
+          <h2 className="mb-4 text-xl font-semibold">Governance</h2>
+          <GovernanceSection
+            governance={entry.governance}
+            lifecycle={
+              typeof entry.attributes?.lifecycle === "string"
+                ? entry.attributes.lifecycle
+                : undefined
+            }
+            taxonomy={getTaxonomy()}
+            definition={governance}
+          />
         </section>
       ) : null}
 

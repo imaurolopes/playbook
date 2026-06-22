@@ -103,3 +103,18 @@ actions:
     icon: package-open
     href: /projects/example-data-platform/agent-package
     appearance: primary
+governance:
+  owner: platform-owner
+  reviewers:
+    - architecture-practice
+    - data-governance
+  lastReviewedAt: "2026-06-10"
+  nextReviewAt: "2026-07-10"
+  reviewNotes:
+    - date: "2026-06-10"
+      reviewer: architecture-practice
+      note: Workspace scope accepted for the assessment stage.
+  qualityScore: 82
+  completenessScore: 76
+  confidence: medium
+  evidenceLevel: moderate

@@ -1,0 +1,59 @@
+schemaVersion: "1"
+asOf: "2026-06-21"
+recentlyApprovedDays: 90
+
+badges:
+  - lifecycle
+  - confidence
+  - owner
+  - reviewOverdue
+
+filters:
+  - id: draft
+    label: Draft
+    field: lifecycle
+    equals: draft
+  - id: review
+    label: In Review
+    field: lifecycle
+    equals: review
+  - id: approved
+    label: Approved
+    field: lifecycle
+    equals: approved
+  - id: deprecated
+    label: Deprecated
+    field: lifecycle
+    equals: deprecated
+  - id: review-overdue
+    label: Review overdue
+    derived: reviewOverdue
+  - id: low-confidence
+    label: Low confidence
+    field: governance.confidence
+    equals: low
+  - id: missing-owner
+    label: Missing owner
+    derived: missingOwner
+
+dashboard:
+  sections:
+    - id: lifecycle
+      label: Content by lifecycle
+      groupBy: lifecycle
+    - id: overdue
+      label: Overdue reviews
+      filter: review-overdue
+    - id: low-confidence
+      label: Low confidence
+      filter: low-confidence
+    - id: missing-owner
+      label: Missing owner
+      filter: missing-owner
+    - id: recently-approved
+      label: Recently approved
+      recentDays: 90
+      derived: recentlyApproved
+    - id: deprecated
+      label: Deprecated
+      filter: deprecated

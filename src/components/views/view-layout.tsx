@@ -9,6 +9,7 @@ import { useLayoutSelection } from "@/components/views/use-layout-selection";
 import { ViewSelector } from "@/components/views/view-selector";
 import type {
   Entry,
+  GovernanceDefinition,
   KnowledgeNode,
   MetadataValue,
   RelationshipGraphPanelDefinition,
@@ -43,6 +44,7 @@ function EntryCards({
   taxonomy,
   view,
   layout,
+  governance,
   onSelect
 }: ViewLayoutProps & { onSelect: (entry: Entry) => void }) {
   const periodic = layout.layout === "periodic";
@@ -56,6 +58,7 @@ function EntryCards({
           dimensions={taxonomy.dimensions}
           view={view}
           density={layout.cardDensity}
+          governance={governance}
           onSelect={onSelect}
         />
       ))}
@@ -204,6 +207,7 @@ interface ViewLayoutProps {
     Partial<ViewLayoutSettings> & { enabled?: boolean }
   >;
   contextTitle?: string;
+  governance: GovernanceDefinition;
 }
 
 export function ViewLayout(props: ViewLayoutProps) {
@@ -291,6 +295,7 @@ export function ViewLayout(props: ViewLayoutProps) {
           entry={selectedEntry}
           registry={props.registry}
           taxonomy={props.taxonomy}
+          governance={props.governance}
           sections={selection.layout.detailSections}
           onClose={closePanel}
         />

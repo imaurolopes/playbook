@@ -5,6 +5,7 @@ import {
   getProjectById,
   getProjectOutputs,
   getProjects,
+  getGovernance,
   getTaxonomy,
   getViews
 } from "@/lib/content/load";
@@ -54,6 +55,7 @@ export default async function ProjectPage({ params }: PageProps) {
       relationshipGraph={views.viewEngine.panels?.relationshipGraph}
       levelDimension={views.viewEngine.selectors?.levelAttribute}
       breadcrumbs={views.viewEngine.breadcrumbs}
+      governance={getGovernance()}
     />
   );
 }

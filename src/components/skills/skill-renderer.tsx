@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
+import { GovernanceSection } from "@/components/governance/governance-section";
 import { ValueRenderer } from "@/components/renderers/value-renderer";
 import {
   resolveIncomingRelationships,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/relationships/resolve";
 import type {
   Entry,
+  GovernanceDefinition,
   KnowledgeNode,
   MetadataValue,
   TaxonomyDefinition
@@ -23,7 +25,8 @@ const sectionLabels: Record<string, string> = {
   risks: "Risks",
   checklist: "Checklist",
   references: "References",
-  relationships: "Relationships"
+  relationships: "Relationships",
+  governance: "Governance"
 };
 
 function SkillSection({
@@ -104,15 +107,18 @@ export function SkillRenderer({
   entry,
   registry,
   taxonomy,
-  sections
+  sections,
+  governance
 }: {
   entry: Entry;
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
   sections?: string[];
+  governance: GovernanceDefinition;
 }) {
   const orderedSections = sections ?? [
     "overview",
+    "governance",
     "inputs",
     "questions",
     "decisionRules",
@@ -159,6 +165,18 @@ export function SkillRenderer({
     checklist: <ListValue value={entry.checklist} />,
     references: (
       <ReferenceList references={entry.references} registry={registry} />
+    ),
+    governance: (
+      <GovernanceSection
+        governance={entry.governance}
+        lifecycle={
+          typeof entry.attributes?.lifecycle === "string"
+            ? entry.attributes.lifecycle
+            : undefined
+        }
+        taxonomy={taxonomy}
+        definition={governance}
+      />
     ),
     relationships: (
       <div className="grid gap-8 lg:grid-cols-2">

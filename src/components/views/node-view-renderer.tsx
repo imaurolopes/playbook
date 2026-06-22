@@ -16,6 +16,7 @@ import {
 import type {
   BreadcrumbDefinition,
   Entry,
+  GovernanceDefinition,
   KnowledgeNode,
   MetadataValue,
   RelationshipGraphPanelDefinition,
@@ -46,6 +47,7 @@ export function NodeViewRenderer({
   selector,
   layouts,
   breadcrumbs,
+  governance,
   detailContent
 }: {
   entry: Entry;
@@ -60,6 +62,7 @@ export function NodeViewRenderer({
   selector?: ViewSelectorDefinition;
   layouts?: ViewEngineDefinition["layouts"];
   breadcrumbs?: BreadcrumbDefinition;
+  governance: GovernanceDefinition;
   detailContent: ReactNode;
 }) {
   const layoutDefinitions = layouts ?? {};
@@ -145,6 +148,7 @@ export function NodeViewRenderer({
             registry={registry}
             layout={selection.layout}
             contextTitle={entry.title}
+            governance={governance}
           />
         )}
       </div>

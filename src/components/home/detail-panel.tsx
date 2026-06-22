@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { IconToken } from "@/components/metadata/icon-token";
+import { GovernanceSection } from "@/components/governance/governance-section";
 import { MetadataValueView } from "@/components/home/metadata-value";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
 import { resolveOutgoingRelationships } from "@/lib/relationships/resolve";
 import { resolveTaxonomyDimension } from "@/lib/metadata/taxonomy";
 import type {
   Entry,
+  GovernanceDefinition,
   KnowledgeNode,
   TaxonomyDefinition
 } from "@/types/content";
@@ -25,12 +27,14 @@ export function DetailPanel({
   entry,
   registry,
   taxonomy,
+  governance,
   sections: configuredSections,
   onClose
 }: {
   entry?: Entry;
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
+  governance: GovernanceDefinition;
   sections?: string[];
   onClose: () => void;
 }) {
@@ -59,6 +63,7 @@ export function DetailPanel({
   const sections = new Set(
     configuredSections ?? [
       "attributes",
+      "governance",
       "relationships",
       "documents",
       "actions"
@@ -140,6 +145,22 @@ export function DetailPanel({
               <RelationshipSections
                 relationships={relationships}
                 onNavigate={onClose}
+              />
+            </section>
+          ) : null}
+
+          {sections.has("governance") ? (
+            <section>
+              <h3 className="detail-heading">Governance</h3>
+              <GovernanceSection
+                governance={entry.governance}
+                lifecycle={
+                  typeof entry.attributes?.lifecycle === "string"
+                    ? entry.attributes.lifecycle
+                    : undefined
+                }
+                taxonomy={taxonomy}
+                definition={governance}
               />
             </section>
           ) : null}

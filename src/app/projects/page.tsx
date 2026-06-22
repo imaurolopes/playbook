@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { ProjectCatalog } from "@/components/projects/project-catalog";
-import { getProjects, getTaxonomy, getViews } from "@/lib/content/load";
+import {
+  getGovernance,
+  getProjects,
+  getTaxonomy,
+  getViews
+} from "@/lib/content/load";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -13,6 +18,7 @@ export default function ProjectsPage() {
       projects={getProjects()}
       taxonomy={getTaxonomy()}
       breadcrumbs={getViews().viewEngine.breadcrumbs}
+      governance={getGovernance()}
     />
   );
 }

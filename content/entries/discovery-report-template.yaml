@@ -48,4 +48,13 @@ relationships:
     target: discovery-facilitation
   - type: derived-from
     target: outcome-discovery
-
+governance:
+  owner: discovery-practice
+  reviewers:
+    - architecture-practice
+  lastReviewedAt: "2026-06-05"
+  nextReviewAt: "2026-09-05"
+  qualityScore: 85
+  completenessScore: 89
+  confidence: high
+  evidenceLevel: strong

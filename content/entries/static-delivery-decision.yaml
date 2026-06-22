@@ -29,3 +29,17 @@ content:
       - Low operational overhead
       - Routes must be known at build time
       - Dynamic server features are unavailable
+governance:
+  owner: architecture-practice
+  reviewers:
+    - platform-engineering
+  lastReviewedAt: "2026-06-15"
+  nextReviewAt: "2026-09-15"
+  reviewNotes:
+    - date: "2026-06-15"
+      reviewer: platform-engineering
+      note: Decision remains appropriate for the current static product scope.
+  qualityScore: 94
+  completenessScore: 90
+  confidence: high
+  evidenceLevel: strong

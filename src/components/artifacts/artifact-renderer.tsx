@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { RelationshipSections } from "@/components/relationships/relationship-sections";
+import { GovernanceSection } from "@/components/governance/governance-section";
 import { ValueRenderer } from "@/components/renderers/value-renderer";
 import {
   resolveIncomingRelationships,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/relationships/resolve";
 import type {
   Entry,
+  GovernanceDefinition,
   KnowledgeNode,
   MetadataValue,
   TaxonomyDefinition
@@ -29,7 +31,8 @@ const labels: Record<string, string> = {
   criteria: "Decision Criteria",
   rules: "Decision Rules",
   references: "References",
-  relationships: "Relationships"
+  relationships: "Relationships",
+  governance: "Governance"
 };
 
 function ArtifactSection({
@@ -108,14 +111,21 @@ export function ArtifactRenderer({
   entry,
   registry,
   taxonomy,
-  sections
+  sections,
+  governance
 }: {
   entry: Entry;
   registry: KnowledgeNode[];
   taxonomy: TaxonomyDefinition;
   sections?: string[];
+  governance: GovernanceDefinition;
 }) {
-  const orderedSections = sections ?? ["overview", "references", "relationships"];
+  const orderedSections = sections ?? [
+    "overview",
+    "governance",
+    "references",
+    "relationships"
+  ];
   const node = registry.find((candidate) => candidate.id === entry.id);
   const outgoing = node
     ? resolveOutgoingRelationships(node, registry, taxonomy)
@@ -154,6 +164,18 @@ export function ArtifactRenderer({
     rules: <ListValue value={entry.rules} />,
     references: (
       <ReferenceList references={entry.references} registry={registry} />
+    ),
+    governance: (
+      <GovernanceSection
+        governance={entry.governance}
+        lifecycle={
+          typeof entry.attributes?.lifecycle === "string"
+            ? entry.attributes.lifecycle
+            : undefined
+        }
+        taxonomy={taxonomy}
+        definition={governance}
+      />
     ),
     relationships: (
       <div className="grid gap-8 lg:grid-cols-2">

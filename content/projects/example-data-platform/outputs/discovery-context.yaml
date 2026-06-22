@@ -28,3 +28,16 @@ relationships:
     target: discovery-report-template
   - type: validates
     target: discovery-readiness-checklist
+governance:
+  reviewers:
+    - discovery-practice
+  lastReviewedAt: "2026-06-12"
+  nextReviewAt: "2026-07-12"
+  reviewNotes:
+    - date: "2026-06-12"
+      reviewer: discovery-practice
+      note: Owner must be assigned before approval.
+  qualityScore: 74
+  completenessScore: 70
+  confidence: medium
+  evidenceLevel: moderate

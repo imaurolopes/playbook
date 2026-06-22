@@ -72,3 +72,13 @@ relationships:
     target: discovery-readiness-checklist
   - type: related-to
     target: document-discovery-starter-guide
+governance:
+  owner: discovery-practice
+  reviewers:
+    - delivery-leads
+  lastReviewedAt: "2026-06-05"
+  nextReviewAt: "2026-09-05"
+  qualityScore: 87
+  completenessScore: 84
+  confidence: high
+  evidenceLevel: strong

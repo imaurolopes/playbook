@@ -31,3 +31,18 @@ content:
 documents:
   - path: discovery/starter-guide.md
     label: Guide
+governance:
+  owner: discovery-practice
+  reviewers:
+    - architecture-practice
+    - delivery-leads
+  lastReviewedAt: "2026-02-15"
+  nextReviewAt: "2026-05-15"
+  reviewNotes:
+    - date: "2026-02-15"
+      reviewer: architecture-practice
+      note: Questions are useful, but evidence guidance needs another review.
+  qualityScore: 72
+  completenessScore: 68
+  confidence: low
+  evidenceLevel: moderate

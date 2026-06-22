@@ -14,6 +14,10 @@ items:
     icon: folder-kanban
     route: /projects
 
+  - label: Governance
+    icon: shield-check
+    route: /governance
+
   - label: New Item
     icon: copy
     route: /authoring/new

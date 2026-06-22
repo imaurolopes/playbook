@@ -35,3 +35,17 @@ supportingMaterials:
   - kind: comparison-table
     locator: internal://research/static-delivery-options
     label: Delivery model comparison
+governance:
+  owner: engineering-research
+  reviewers:
+    - architecture-practice
+  lastReviewedAt: "2026-06-20"
+  nextReviewAt: "2026-09-20"
+  reviewNotes:
+    - date: "2026-06-20"
+      reviewer: architecture-practice
+      note: Evidence is sufficient for current static delivery decisions.
+  qualityScore: 91
+  completenessScore: 88
+  confidence: high
+  evidenceLevel: strong

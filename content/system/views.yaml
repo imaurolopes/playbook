@@ -73,6 +73,7 @@ viewEngine:
       - detail
     detailSections:
       - attributes
+      - governance
       - relationships
       - content
       - documents
@@ -116,6 +117,7 @@ viewEngine:
           - relationshipGraph
         detailSections:
           - overview
+          - governance
           - status
           - stakeholders
           - constraints
@@ -135,6 +137,7 @@ viewEngine:
         selectorEnabled: false
         detailSections:
           - overview
+          - governance
           - inputs
           - questions
           - decisionRules
@@ -149,6 +152,7 @@ viewEngine:
         selectorEnabled: false
         detailSections:
           - overview
+          - governance
           - inputs
           - sections
           - completionCriteria
@@ -159,6 +163,7 @@ viewEngine:
         selectorEnabled: false
         detailSections:
           - overview
+          - governance
           - prerequisites
           - items
           - evidenceRequirements
@@ -169,6 +174,7 @@ viewEngine:
         selectorEnabled: false
         detailSections:
           - overview
+          - governance
           - principles
           - recommendations
           - antiPatterns
@@ -180,6 +186,7 @@ viewEngine:
         selectorEnabled: false
         detailSections:
           - overview
+          - governance
           - options
           - criteria
           - rules

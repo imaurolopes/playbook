@@ -24,6 +24,9 @@ schemas:
       documents:
         type: list
         itemSchema: document-reference
+      governance:
+        type: object
+        itemSchema: governance-record
 
   - id: operational-skill
     label: Operational skill
@@ -244,6 +247,9 @@ schemas:
       relationships:
         type: list
         itemSchema: relationship
+      governance:
+        type: object
+        itemSchema: governance-record
 
   - id: project-workspace
     label: Project workspace
@@ -313,6 +319,9 @@ schemas:
       actions:
         type: list
         itemSchema: action
+      governance:
+        type: object
+        itemSchema: governance-record
 
   - id: agent-knowledge-package
     label: Agent knowledge package
@@ -362,6 +371,9 @@ schemas:
       supportingMaterials:
         type: list
         itemSchema: supporting-material
+      governance:
+        type: object
+        itemSchema: governance-record
 
 definitions:
   open-item:
@@ -424,6 +436,44 @@ definitions:
       owner:
         type: string
       mitigation:
+        type: string
+
+  governance-record:
+    open: true
+    fields:
+      owner:
+        type: string
+      reviewers:
+        type: list
+      lastReviewedAt:
+        type: string
+      nextReviewAt:
+        type: string
+      reviewNotes:
+        type: list
+        itemSchema: governance-review-note
+      qualityScore:
+        type: number
+      completenessScore:
+        type: number
+      confidence:
+        type: string
+        taxonomy: confidence
+      evidenceLevel:
+        type: string
+        taxonomy: evidenceLevel
+
+  governance-review-note:
+    required:
+      - date
+      - reviewer
+      - note
+    fields:
+      date:
+        type: string
+      reviewer:
+        type: string
+      note:
         type: string
 
   action:

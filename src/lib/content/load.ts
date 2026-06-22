@@ -3,6 +3,7 @@ import path from "node:path";
 import { parse } from "yaml";
 import type {
   Entry,
+  GovernanceDefinition,
   NavigationDefinition,
   ProjectOutput,
   ProjectWorkspace,
@@ -95,6 +96,10 @@ export function getTheme(): ThemeDefinition {
 
 export function getSearch(): SearchDefinition {
   return readYaml<SearchDefinition>("system/search.yaml");
+}
+
+export function getGovernance(): GovernanceDefinition {
+  return readYaml<GovernanceDefinition>("system/governance.yaml");
 }
 
 export function getDocument(relativePath: string): string | undefined {

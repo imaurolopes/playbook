@@ -1,12 +1,14 @@
 "use client";
 
 import { IconToken } from "@/components/metadata/icon-token";
+import { GovernanceBadges } from "@/components/governance/governance-badges";
 import {
   resolveTaxonomyDimension,
   resolveTaxonomyOption
 } from "@/lib/metadata/taxonomy";
 import type {
   Entry,
+  GovernanceDefinition,
   MetadataValue,
   TaxonomyDimension,
   TaxonomyOption,
@@ -47,6 +49,7 @@ export function MetadataCard({
   dimensions,
   view,
   density,
+  governance,
   onSelect
 }: {
   entry: Entry;
@@ -54,6 +57,7 @@ export function MetadataCard({
   dimensions: TaxonomyDimension[];
   view: ViewDefinition;
   density?: string;
+  governance: GovernanceDefinition;
   onSelect: (entry: Entry) => void;
 }) {
   const badgeDimensions = view.presentation?.badgeDimensions ?? [];
@@ -171,6 +175,14 @@ export function MetadataCard({
             </span>
           ))}
         </div>
+
+        <GovernanceBadges
+          governance={entry.governance}
+          lifecycle={asValues(entry.attributes?.lifecycle)[0]}
+          taxonomy={{ dimensions }}
+          definition={governance}
+          compact
+        />
 
         {tags.length ? (
           <div className="flex flex-wrap gap-1">

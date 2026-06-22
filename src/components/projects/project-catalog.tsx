@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ContextBreadcrumbs } from "@/components/navigation/context-breadcrumbs";
 import { IconToken } from "@/components/metadata/icon-token";
+import { GovernanceBadges } from "@/components/governance/governance-badges";
 import {
   resolveTaxonomyDimension,
   resolveTaxonomyOption
 } from "@/lib/metadata/taxonomy";
 import type {
   BreadcrumbDefinition,
+  GovernanceDefinition,
   ProjectWorkspace,
   TaxonomyDefinition
 } from "@/types/content";
@@ -14,11 +16,13 @@ import type {
 export function ProjectCatalog({
   projects,
   taxonomy,
-  breadcrumbs
+  breadcrumbs,
+  governance
 }: {
   projects: ProjectWorkspace[];
   taxonomy: TaxonomyDefinition;
   breadcrumbs?: BreadcrumbDefinition;
+  governance: GovernanceDefinition;
 }) {
   const statusDimension = resolveTaxonomyDimension(taxonomy, "projectStatus");
 
@@ -75,6 +79,15 @@ export function ProjectCatalog({
                 <span>{project.stages?.length ?? 0} stages</span>
                 <span>·</span>
                 <span>{project.outputs?.length ?? 0} outputs</span>
+              </div>
+              <div className="mt-4">
+                <GovernanceBadges
+                  governance={project.governance}
+                  lifecycle={project.lifecycle}
+                  taxonomy={taxonomy}
+                  definition={governance}
+                  compact
+                />
               </div>
             </Link>
           );

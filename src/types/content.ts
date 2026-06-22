@@ -27,6 +27,24 @@ export interface EntryAction {
   appearance?: string;
 }
 
+export interface GovernanceReviewNote {
+  date: string;
+  reviewer: string;
+  note: string;
+}
+
+export interface GovernanceMetadata {
+  owner?: string;
+  reviewers?: string[];
+  lastReviewedAt?: string;
+  nextReviewAt?: string;
+  reviewNotes?: GovernanceReviewNote[];
+  qualityScore?: number;
+  completenessScore?: number;
+  confidence?: string;
+  evidenceLevel?: string;
+}
+
 export interface Entry {
   schemaVersion: string;
   id: string;
@@ -39,6 +57,7 @@ export interface Entry {
   content?: ContentBlock[];
   documents?: DocumentReference[];
   actions?: EntryAction[];
+  governance?: GovernanceMetadata;
   objective?: string;
   whenToUse?: MetadataValue[];
   requiredInputs?: MetadataValue[];
@@ -89,6 +108,7 @@ export interface ProjectWorkspace {
   openQuestions?: MetadataValue[];
   relationships?: Relationship[];
   actions?: EntryAction[];
+  governance?: GovernanceMetadata;
 }
 
 export interface ProjectOutput {
@@ -103,6 +123,7 @@ export interface ProjectOutput {
   data?: Record<string, MetadataValue>;
   documents?: DocumentReference[];
   relationships?: Relationship[];
+  governance?: GovernanceMetadata;
 }
 
 export interface NavigationNode {
@@ -165,6 +186,7 @@ export interface KnowledgeNode {
   route?: string;
   attributes?: Record<string, MetadataValue>;
   relationships?: Relationship[];
+  governance?: GovernanceMetadata;
 }
 
 export interface ThemeDefinition {
@@ -389,4 +411,44 @@ export interface SearchIndexItem {
     lifecycle: string;
     relationships: string;
   };
+}
+
+export interface GovernanceFilterDefinition {
+  id: string;
+  label: string;
+  field?: string;
+  equals?: string;
+  derived?: "reviewOverdue" | "missingOwner";
+}
+
+export interface GovernanceDashboardSectionDefinition {
+  id: string;
+  label: string;
+  filter?: string;
+  recentDays?: number;
+  groupBy?: string;
+  derived?: "recentlyApproved";
+}
+
+export interface GovernanceDefinition {
+  asOf?: string;
+  recentlyApprovedDays?: number;
+  badges?: string[];
+  filters: GovernanceFilterDefinition[];
+  dashboard:
+    | GovernanceDashboardSectionDefinition[]
+    | { sections: GovernanceDashboardSectionDefinition[] };
+}
+
+export interface GovernanceIndexItem {
+  id: string;
+  title: string;
+  summary?: string;
+  route: string;
+  collection: string;
+  lifecycle?: string;
+  governance?: GovernanceMetadata;
+  reviewOverdue: boolean;
+  missingOwner: boolean;
+  recentlyApproved: boolean;
 }

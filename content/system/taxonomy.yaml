@@ -219,6 +219,46 @@ dimensions:
         color: "#dc2626"
         order: 40
 
+  - id: confidence
+    label: Confidence
+    cardinality: one
+    options:
+      - value: low
+        label: Low Confidence
+        icon: triangle-alert
+        color: "#dc2626"
+        order: 10
+      - value: medium
+        label: Medium Confidence
+        icon: circle-help
+        color: "#d97706"
+        order: 20
+      - value: high
+        label: High Confidence
+        icon: badge-check
+        color: "#16a34a"
+        order: 30
+
+  - id: evidenceLevel
+    label: Evidence Level
+    cardinality: one
+    options:
+      - value: weak
+        label: Weak Evidence
+        icon: triangle-alert
+        color: "#dc2626"
+        order: 10
+      - value: moderate
+        label: Moderate Evidence
+        icon: circle-help
+        color: "#d97706"
+        order: 20
+      - value: strong
+        label: Strong Evidence
+        icon: shield-check
+        color: "#16a34a"
+        order: 30
+
   - id: projectStatus
     label: Project Status
     cardinality: one

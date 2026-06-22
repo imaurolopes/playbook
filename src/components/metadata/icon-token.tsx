@@ -54,6 +54,8 @@ import {
   TableProperties,
   TriangleAlert,
   Upload,
+  UserRound,
+  UserRoundX,
   Zap,
   Workflow
 } from "lucide-react";
@@ -66,6 +68,7 @@ const iconTokens: Record<string, LucideIcon> = {
   blocks: Blocks,
   "book-open": BookOpen,
   bot: Bot,
+  "calendar-alert": CalendarClock,
   "calendar-clock": CalendarClock,
   "chart-no-axes-combined": ChartNoAxesCombined,
   "circle-alert": CircleAlert,
@@ -112,6 +115,8 @@ const iconTokens: Record<string, LucideIcon> = {
   "table-properties": TableProperties,
   "triangle-alert": TriangleAlert,
   upload: Upload,
+  "user-round": UserRound,
+  "user-round-x": UserRoundX,
   zap: Zap,
   workflow: Workflow
 };

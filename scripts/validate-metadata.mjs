@@ -93,6 +93,34 @@ function validateRelationships(filePath, relationships) {
   }
 }
 
+function validateGovernance(filePath, governance) {
+  if (!governance || typeof governance !== "object") return;
+  for (const field of ["qualityScore", "completenessScore"]) {
+    const value = governance[field];
+    if (
+      value != null &&
+      (typeof value !== "number" || value < 0 || value > 100)
+    ) {
+      errors.push(
+        `${relative(filePath)}: governance.${field} must be a number from 0 to 100`
+      );
+    }
+  }
+  for (const field of ["lastReviewedAt", "nextReviewAt"]) {
+    const value = governance[field];
+    if (
+      value != null &&
+      (typeof value !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        Number.isNaN(Date.parse(`${value}T00:00:00Z`)))
+    ) {
+      errors.push(
+        `${relative(filePath)}: governance.${field} must use YYYY-MM-DD`
+      );
+    }
+  }
+}
+
 function resolvedSchema(schema) {
   if (!schema?.extends) return schema;
   const parent = resolvedSchema(schemas.get(schema.extends));
@@ -153,6 +181,7 @@ for (const filePath of listFiles(contentRoot, /\.ya?ml$/i)) {
   const document = parse(fs.readFileSync(filePath, "utf8")) ?? {};
   validateAttributes(filePath, document.attributes);
   validateRelationships(filePath, document.relationships);
+  validateGovernance(filePath, document.governance);
   if (typeof document.schema === "string") {
     const schema = schemas.get(document.schema);
     if (schema) validateDefinedFields(filePath, document, resolvedSchema(schema));
@@ -222,6 +251,73 @@ for (const [collection, presentation] of Object.entries(
   ) {
     errors.push(
       `${relative(searchPath)}: collections.${collection}.label must be a non-empty string`
+    );
+  }
+}
+
+const governancePath = path.join(contentRoot, "system", "governance.yaml");
+const governance = parse(fs.readFileSync(governancePath, "utf8"));
+const governanceFilterIds = new Set();
+for (const [index, filter] of (governance.filters ?? []).entries()) {
+  if (!filter.id || !filter.label) {
+    errors.push(
+      `${relative(governancePath)}: filters[${index}] requires id and label`
+    );
+  }
+  if (governanceFilterIds.has(filter.id)) {
+    errors.push(
+      `${relative(governancePath)}: filters contains duplicate id "${filter.id}"`
+    );
+  }
+  governanceFilterIds.add(filter.id);
+  if (
+    filter.derived &&
+    !["reviewOverdue", "missingOwner"].includes(filter.derived)
+  ) {
+    errors.push(
+      `${relative(governancePath)}: filters[${index}].derived must be reviewOverdue or missingOwner`
+    );
+  }
+  if (filter.field === "lifecycle") {
+    const lifecycle = dimensions.get("lifecycle");
+    if (filter.equals && !lifecycle?.values.has(filter.equals)) {
+      report(
+        governancePath,
+        `filters[${index}].equals`,
+        filter.equals,
+        "lifecycle"
+      );
+    }
+  }
+  if (filter.field === "governance.confidence") {
+    const confidence = dimensions.get("confidence");
+    if (filter.equals && !confidence?.values.has(filter.equals)) {
+      report(
+        governancePath,
+        `filters[${index}].equals`,
+        filter.equals,
+        "confidence"
+      );
+    }
+  }
+}
+const governanceSections = Array.isArray(governance.dashboard)
+  ? governance.dashboard
+  : governance.dashboard?.sections ?? [];
+for (const [index, section] of governanceSections.entries()) {
+  if (section.filter && !governanceFilterIds.has(section.filter)) {
+    errors.push(
+      `${relative(governancePath)}: dashboard.sections[${index}].filter references unknown filter "${section.filter}"`
+    );
+  }
+  if (section.groupBy && !dimensions.has(section.groupBy)) {
+    errors.push(
+      `${relative(governancePath)}: dashboard.sections[${index}].groupBy references unknown taxonomy dimension "${section.groupBy}"`
+    );
+  }
+  if (section.derived && section.derived !== "recentlyApproved") {
+    errors.push(
+      `${relative(governancePath)}: dashboard.sections[${index}].derived must be recentlyApproved`
     );
   }
 }
