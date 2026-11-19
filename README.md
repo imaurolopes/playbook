@@ -1,6 +1,6 @@
 ﻿# Playbook
 
-Playbook is a browser-local workspace for structured technical knowledge. The workspace supports topic management, Markdown context, and explicit topic relationships.
+Playbook is a browser-local workspace for structured technical knowledge. The workspace supports topic management, Markdown context, explicit topic relationships, and project-scoped implementations.
 
 ## Setup
 
@@ -27,13 +27,17 @@ The production build is written to `dist/`. For static hosting, configure the ho
 - `src/domain/` holds the topic and relationship models and their validation rules.
 - `src/application/` defines the repository contract and coordinates topic changes.
 - `src/infrastructure/` provides the LocalStorage implementation and sample data.
-- `src/presentation/` contains the React shell, topic routes, editor, Markdown rendering, and dependency graph.
+- `src/presentation/` contains the React shell, topic routes, editor, Markdown rendering, dependency graph, and implementation workspace.
 - `docs/prototypes/topic/` contains the visual references.
 
 The app seeds sample topics when the storage key is absent. It preserves an initialized empty workspace and retains malformed data for recovery. Deleting a topic promotes its direct children to the deleted topic’s parent, or to the top level if it had no parent.
 
 Use **Dependencies → Add relationship** to connect two topics. A dependency points from the current topic to the required topic and appears under **Required by** on the other side. A related connection appears in both topics’ Content summaries. Topic hierarchy stays independent of both relationship types.
 
-Sprint 01 topic arrays are read as workspaces with no relationships. The next successful write stores topics and relationships together without changing existing topic fields. Deleting a topic removes its incoming and outgoing relationships in the same write.
+Sprint 01 topic arrays are read as workspaces with no relationships. The next successful write stores topics, relationships, projects, implementations, and tasks together without changing existing topic fields. Deleting a topic removes its incoming and outgoing relationships in the same write.
 
-Data is stored per browser and origin. Save edits before switching topics. Implementation, Agent Instructions, Version History, and Metadata are navigation placeholders. Core, Organization, and Project are classifications in this sprint.
+Use **Implementation** to create or select a project. This opens the current topic's plan and creates it automatically if needed. Set the plan status, manage and reorder tasks, and record technical decisions in Markdown. The progress ring shows the rounded percentage of tasks marked Done. A plan with zero tasks has 0% progress, and the plan status is managed independently.
+
+The Azure Data Platform and AWS Data Platform example projects are supplied when implementation storage is first initialized. Deleting a task affects that task alone. Deleting an implementation removes its tasks and notes. Deleting a project removes its implementations and their tasks, and deleting a topic removes its implementations across projects as well as its topic relationships. Each deletion is saved in one write.
+
+Data is stored per browser and origin. Save edits before switching topics. Agent Instructions, Version History, and Metadata are navigation placeholders. Core, Organization, and Project are classifications in this sprint.

@@ -1,5 +1,6 @@
 ﻿@import "tailwindcss";
 @import "./dependencies.css";
+@import "./implementation.css";
 @source "../";
 
 @theme {

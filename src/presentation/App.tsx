@@ -1,14 +1,16 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router'
 import {
   Bot, CalendarDays, CheckCircle2, ChevronRight, Code2, FileText, FolderClosed, GitFork,
   Info, Layers3, Link2, Pencil, Plus, Trash2,
 } from 'lucide-react'
+import type { ImplementationService } from '../application/implementation-service'
 import type { TopicWorkspace } from '../application/topic-repository'
 import type { TopicService } from '../application/topic-service'
 import { ancestorsOf, type Topic, type TopicInput } from '../domain/topic'
 import { otherTopicId, relationshipsFor, type RelationshipInput } from '../domain/topic-relationship'
 import { Dependencies } from './Dependencies'
+import { Implementation } from './Implementation'
 import { Markdown } from './markdown'
 import { Shell, TopicTree, topicPath } from './navigation'
 import { TopicEditor } from './TopicEditor'
@@ -50,15 +52,17 @@ function TopicSummary({ topic, workspace }: { topic: Topic; workspace: TopicWork
 
 interface TopicRouteProps {
   workspace: TopicWorkspace
+  implementationService: ImplementationService
   onSave: (input: TopicInput, id?: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onAddRelationship: (input: RelationshipInput) => Promise<void>
   onRemoveRelationship: (id: string) => Promise<void>
 }
 
-function TopicScreen({ topic, workspace, onSave, onDelete, onAddRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
+function TopicScreen({ topic, workspace, implementationService, onSave, onDelete, onAddRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
   const { topics, relationships } = workspace
   const { tab } = useParams()
+  const { search } = useLocation()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -98,13 +102,13 @@ function TopicScreen({ topic, workspace, onSave, onDelete, onAddRelationship, on
           }}><Trash2 size={18} /></button>
           <button className="button primary" onClick={() => {
             setEditing(true)
-            if (slug !== 'content') navigate(topicPath(topic.id))
+            if (slug !== 'content') navigate(topicPath(topic.id) + search)
           }}><Pencil size={17} /> Edit</button>
         </div>
       </div>
       <div className="topic-badges"><span>{topic.scope}</span>{parent && <Link to={topicPath(parent.id)}>{parent.title}</Link>}</div>
       <nav className="tabs" aria-label="Topic sections">
-        {tabs.map(([value, name, Icon]) => <Link key={value} to={topicPath(topic.id, value)} aria-current={slug === value ? 'page' : undefined}><Icon size={19} /> {name}</Link>)}
+        {tabs.map(([value, name, Icon]) => <Link key={value} to={topicPath(topic.id, value) + search} aria-current={slug === value ? 'page' : undefined}><Icon size={19} /> {name}</Link>)}
       </nav>
     </div>
 
@@ -122,7 +126,8 @@ function TopicScreen({ topic, workspace, onSave, onDelete, onAddRelationship, on
       <TopicSummary topic={topic} workspace={workspace} />
     </div>
     {slug === 'dependencies' && <Dependencies topic={topic} topics={topics} relationships={relationships} onAdd={onAddRelationship} onRemove={onRemoveRelationship} />}
-    {slug !== 'content' && slug !== 'dependencies' && <section className="panel placeholder">
+    {slug === 'implementation' && <Implementation topic={topic} topics={topics} service={implementationService} />}
+    {slug !== 'content' && slug !== 'dependencies' && slug !== 'implementation' && <section className="panel placeholder">
       <TabIcon className="purple" size={28} />
       <h2>{label}</h2>
       <p className="muted">This section is planned for a future sprint.</p>
@@ -130,7 +135,7 @@ function TopicScreen({ topic, workspace, onSave, onDelete, onAddRelationship, on
     </section>}
     <dialog ref={dialog} className="panel delete-dialog" aria-labelledby="delete-title" onCancel={event => { if (deleting) event.preventDefault() }}>
       <h2 id="delete-title">Delete topic?</h2>
-      <p><strong>{topic.title}</strong> will be permanently removed. {topics.some(item => item.parentId === topic.id) && 'Its child topics will move up one level.'}{relationships.some(edge => edge.sourceTopicId === topic.id || edge.targetTopicId === topic.id) && ' Its relationships will also be removed.'}</p>
+      <p><strong>{topic.title}</strong> will be permanently removed. Its project implementations and their tasks will also be removed. {topics.some(item => item.parentId === topic.id) && 'Its child topics will move up one level.'}{relationships.some(edge => edge.sourceTopicId === topic.id || edge.targetTopicId === topic.id) && ' Its relationships will also be removed.'}</p>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="editor-actions">
         <button className="button" autoFocus disabled={deleting} onClick={() => dialog.current?.close()}>Cancel</button>
@@ -148,7 +153,7 @@ function TopicRoute(props: TopicRouteProps) {
     : <section className="panel placeholder"><h1>Topic not found</h1><p className="muted">Choose a topic from the sidebar.</p><Link to="/" className="button">Back to topics</Link></section>
 }
 
-export function App({ service }: { service: TopicService }) {
+export function App({ service, implementationService }: { service: TopicService; implementationService: ImplementationService }) {
   const [workspace, setWorkspace] = useState<TopicWorkspace>()
   const topics = workspace?.topics
   const [query, setQuery] = useState('')
@@ -223,8 +228,8 @@ export function App({ service }: { service: TopicService }) {
           <Link to="/topics/new" className="button primary"><Plus size={18} /> New topic</Link>
         </section>} />
         <Route path="/topics/new" element={<section className="new-topic"><h1>New topic</h1><TopicEditor topics={workspace.topics} onSave={save} onCancel={() => navigate('/')} /></section>} />
-        <Route path="/topics/:topicId" element={<TopicRoute workspace={workspace} onSave={save} onDelete={remove} onAddRelationship={addRelationship} onRemoveRelationship={removeRelationship} />} />
-        <Route path="/topics/:topicId/:tab" element={<TopicRoute workspace={workspace} onSave={save} onDelete={remove} onAddRelationship={addRelationship} onRemoveRelationship={removeRelationship} />} />
+        <Route path="/topics/:topicId" element={<TopicRoute workspace={workspace} implementationService={implementationService} onSave={save} onDelete={remove} onAddRelationship={addRelationship} onRemoveRelationship={removeRelationship} />} />
+        <Route path="/topics/:topicId/:tab" element={<TopicRoute workspace={workspace} implementationService={implementationService} onSave={save} onDelete={remove} onAddRelationship={addRelationship} onRemoveRelationship={removeRelationship} />} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>}
     </main>

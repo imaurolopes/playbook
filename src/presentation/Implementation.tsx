@@ -1,0 +1,671 @@
+﻿import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type Modifier } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, CircleCheck, ClipboardList, Code2, Database, ExternalLink, FileJson, FileText, GitBranch, GripVertical, Link2, Minus, Package, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import type { ImplementationWorkspace, TaskChanges } from '../application/implementation-repository'
+import type { ImplementationService } from '../application/implementation-service'
+import {
+  artifactTypes, environments, implementationStatuses, orderedTasks, taskProgress, taskStatuses, webUrl,
+  type AcceptanceCriterion, type ArtifactDetails, type ArtifactType, type Environment, type ImplementationArtifact,
+  type ReferenceDetails, type TaskReference,
+  type ImplementationStatus, type ImplementationTask, type TaskStatus, type TopicImplementation,
+} from '../domain/implementation'
+import type { Topic } from '../domain/topic'
+import { Markdown } from './markdown'
+import { topicPath } from './navigation'
+
+const implementationLabels: Record<ImplementationStatus, string> = {
+  not_started: 'Not started', planned: 'Planned', in_progress: 'In progress', blocked: 'Blocked', completed: 'Completed',
+}
+const taskLabels: Record<TaskStatus, string> = { todo: 'To do', in_progress: 'In progress', blocked: 'Blocked', done: 'Done' }
+const taskIcons = { todo: Minus, in_progress: Play, blocked: Pause, done: Check }
+const environmentLabels: Record<Environment, string> = { development: 'Development', staging: 'Staging', production: 'Production' }
+const artifactLabels: Record<ArtifactType, string> = {
+  code: 'Code', documentation: 'Documentation', api_specification: 'API specification',
+  collection: 'Collection', database_script: 'Database script', other: 'Other',
+}
+const artifactIcons = { code: Code2, documentation: FileText, api_specification: FileJson, collection: Package, database_script: Database, other: Link2 }
+
+function TaskMark({ status }: { status: TaskStatus }) {
+  const Icon = taskIcons[status]
+  return <span className={`task-mark task-${status}`} aria-hidden="true"><Icon size={13} /></span>
+}
+
+const verticalDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 })
+
+function SortableTaskRow({ task, index, expanded, canReorder, busy, onSelect }: {
+  task: ImplementationTask
+  index: number
+  expanded: boolean
+  canReorder: boolean
+  busy: boolean
+  onSelect: () => void
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isOver, activeIndex, overIndex } =
+    useSortable({ id: task.id, disabled: !canReorder || busy })
+  const dropEdge = isOver && activeIndex >= 0 && activeIndex !== overIndex
+    ? (activeIndex < overIndex ? 'after' : 'before')
+    : undefined
+
+  return <li ref={setNodeRef} className="implementation-task-row" data-dragging={isDragging || undefined} data-drop-edge={dropEdge}
+    style={{ transform: CSS.Translate.toString(transform), transition }}>
+    <button type="button" className="task-grip" ref={setActivatorNodeRef} {...attributes} {...listeners}
+      disabled={!canReorder} aria-label={`Reorder ${task.title}`} title={`Reorder ${task.title}`}>
+      <GripVertical size={17} aria-hidden="true" />
+    </button>
+    <button className="implementation-task" type="button" aria-expanded={expanded}
+      aria-controls="implementation-task-details" onClick={onSelect}>
+      <TaskMark status={task.status} />
+      <span className="task-label">
+        <span className="task-number">{index + 1}.</span>
+        <span className="task-title">{task.title}</span>
+      </span>
+      <span className="task-row-status">
+        <span className={`task-badge task-${task.status}`}>{taskLabels[task.status]}</span>
+        <ChevronDown className="task-chevron" size={15} aria-hidden="true" />
+      </span>
+    </button>
+  </li>
+}
+
+function SortableTaskList({ tasks, expandedId, busy, onSelect, onReorder }: {
+  tasks: ImplementationTask[]
+  expandedId?: string
+  busy: boolean
+  onSelect: (id: string) => void
+  onReorder: (id: string, targetId: string) => void
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+  const title = (id: string | number) => tasks.find(task => task.id === id)?.title ?? 'Task'
+  return <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[verticalDrag]}
+    accessibility={{
+      screenReaderInstructions: { draggable: 'Press Space or Enter to pick up a task. Use the up and down arrow keys to move it, then press Space or Enter to drop it. Press Escape to cancel.' },
+      announcements: {
+        onDragStart: ({ active }) => `Picked up ${title(active.id)}.`,
+        onDragOver: ({ active, over }) => over ? `${title(active.id)} is over position ${tasks.findIndex(task => task.id === over.id) + 1} of ${tasks.length}.` : undefined,
+        onDragEnd: ({ active }) => `Dropped ${title(active.id)}.`,
+        onDragCancel: ({ active }) => `Reordering ${title(active.id)} cancelled.`,
+      },
+    }}
+    onDragEnd={({ active, over }) => {
+      if (over && active.id !== over.id) onReorder(String(active.id), String(over.id))
+    }}>
+    <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
+      <ol className="implementation-tasks">{tasks.map((task, index) => <SortableTaskRow key={task.id}
+        task={task} index={index} expanded={expandedId === task.id} canReorder={tasks.length > 1} busy={busy}
+        onSelect={() => onSelect(task.id)} />)}</ol>
+    </SortableContext>
+  </DndContext>
+}
+
+function ImplementationNotice({ message, error = false }: { message: string; error?: boolean }) {
+  const Icon = error ? CircleAlert : CircleCheck
+  return <div className={message ? `implementation-notice${error ? ' is-error' : ''}` : 'sr-only'} role={error ? 'alert' : 'status'}>
+    {message && <><Icon size={18} aria-hidden="true" /><span>{message}</span></>}
+  </div>
+}
+
+type DialogState = { kind: 'project' } | { kind: 'task'; task?: ImplementationTask } |
+  { kind: 'criterion'; taskId: string; criterion?: AcceptanceCriterion } |
+  { kind: 'dependency'; taskId: string } |
+  { kind: 'reference'; taskId: string; reference?: TaskReference } |
+  { kind: 'artifact'; implementationId: string; artifact?: ImplementationArtifact } |
+  { kind: 'confirm'; title: string; message: string; action: () => Promise<void> }
+
+function errorMessage(problem: unknown) {
+  return problem instanceof Error ? problem.message : 'Could not save changes. Please try again.'
+}
+
+function ImplementationDialog({ title, submitLabel, destructive, children, onClose, onSubmit }: {
+  title: string
+  submitLabel: string
+  destructive?: boolean
+  children: ReactNode
+  onClose: () => void
+  onSubmit: (fields: FormData) => Promise<void>
+}) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    dialog.current?.showModal()
+  }, [])
+
+  useEffect(() => {
+    if (error) dialog.current?.scrollTo({ top: 0 })
+  }, [error])
+
+  return <dialog ref={dialog} className="panel delete-dialog implementation-dialog" aria-labelledby="implementation-dialog-title"
+    onClose={onClose} onCancel={event => { if (busy) event.preventDefault() }}>
+    <header className="implementation-dialog-header"><h2 id="implementation-dialog-title">{title}</h2></header>
+    <form onSubmit={async event => {
+      event.preventDefault()
+      if (busy) return
+      const fields = new FormData(event.currentTarget)
+      setBusy(true)
+      setError('')
+      try {
+        await onSubmit(fields)
+        dialog.current?.close()
+        onClose()
+      } catch (problem) {
+        setError(errorMessage(problem))
+      } finally {
+        setBusy(false)
+      }
+    }}>
+      <fieldset disabled={busy}>
+        <div className="implementation-dialog-body">
+          <ImplementationNotice message={error} error />
+          {children}
+        </div>
+        <div className="implementation-dialog-actions">
+          <button type="button" className="button" autoFocus={destructive} onClick={() => dialog.current?.close()}>Cancel</button>
+          <button type="submit" className={`button ${destructive ? 'danger' : 'primary'}`}>{busy ? 'Saving…' : submitLabel}</button>
+        </div>
+      </fieldset>
+    </form>
+  </dialog>
+}
+
+function fieldValue(fields: FormData, name: string) {
+  return String(fields.get(name) ?? '')
+}
+
+function ReferenceDialog({ topics, reference, onClose, onSave }: {
+  topics: readonly Topic[]
+  reference?: TaskReference
+  onClose: () => void
+  onSave: (input: ReferenceDetails) => Promise<void>
+}) {
+  const [kind, setKind] = useState<ReferenceDetails['kind']>(reference?.kind ?? 'topic')
+  return <ImplementationDialog title={reference ? 'Edit reference' : 'Add reference'} submitLabel="Save reference" onClose={onClose} onSubmit={async fields => {
+    if (kind === 'topic') await onSave({ kind, topicId: fieldValue(fields, 'topic') })
+    else await onSave({ kind, title: fieldValue(fields, 'title'), url: fieldValue(fields, 'url') })
+  }}>
+    <div className="implementation-form-field">
+      <label htmlFor="reference-type">Reference type</label>
+      <select className="field" id="reference-type" value={kind} onChange={event => {
+        const next = event.target.value
+        if (next === 'topic' || next === 'url' || next === 'resource') setKind(next)
+      }}><option value="topic">Playbook topic</option><option value="url">External URL</option><option value="resource">Other resource</option></select>
+    </div>
+    {kind === 'topic' ? <div className="implementation-form-field">
+      <label htmlFor="reference-topic">Topic</label>
+      <select className="field" id="reference-topic" name="topic" required defaultValue={reference?.kind === 'topic' ? reference.topicId : ''}>
+        <option value="" disabled>Select a topic</option>
+        {topics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
+      </select>
+    </div> : <>
+      <div className="implementation-form-field">
+        <label htmlFor="reference-title">Title</label>
+        <input className="field" id="reference-title" name="title" required defaultValue={reference?.kind !== 'topic' ? reference?.title : ''} />
+      </div>
+      <div className="implementation-form-field">
+        <label htmlFor="reference-url">{kind === 'resource' ? 'URL (optional)' : 'URL'}</label>
+        <input className="field" id="reference-url" name="url" type="url" required={kind === 'url'} defaultValue={reference?.kind !== 'topic' ? reference?.url : ''} />
+      </div>
+    </>}
+  </ImplementationDialog>
+}
+
+function ArtifactDialog({ artifact, onClose, onSave }: {
+  artifact?: ImplementationArtifact
+  onClose: () => void
+  onSave: (input: ArtifactDetails) => Promise<void>
+}) {
+  return <ImplementationDialog title={artifact ? 'Edit artifact' : 'Add artifact'} submitLabel="Save artifact" onClose={onClose} onSubmit={async fields => {
+    const type = artifactTypes.find(value => value === fieldValue(fields, 'type'))
+    if (!type) throw new Error('Choose an artifact type.')
+    await onSave({ title: fieldValue(fields, 'title'), type, url: fieldValue(fields, 'url'), description: fieldValue(fields, 'description') })
+  }}>
+    <div className="implementation-form-field">
+      <label htmlFor="artifact-title">Title</label>
+      <input className="field" id="artifact-title" name="title" required autoFocus defaultValue={artifact?.title} />
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="artifact-type">Type</label>
+      <select className="field" id="artifact-type" name="type" defaultValue={artifact?.type ?? 'code'}>
+        {artifactTypes.map(type => <option key={type} value={type}>{artifactLabels[type]}</option>)}
+      </select>
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="artifact-url">URL (optional)</label>
+      <input className="field" id="artifact-url" name="url" type="url" defaultValue={artifact?.url} />
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="artifact-description">Description (optional)</label>
+      <textarea className="field" id="artifact-description" name="description" rows={3} defaultValue={artifact?.description} />
+    </div>
+  </ImplementationDialog>
+}
+
+function ResourceLink({ url, title }: { url?: string; title: string }) {
+  const href = url && webUrl(url)
+  return href ? <a className="implementation-resource-link" href={href} target="_blank" rel="noopener noreferrer">
+    {title} <ExternalLink size={13} aria-hidden="true" />
+  </a> : <span>{title}</span>
+}
+
+function DetailAction({ label, icon: Icon, onClick, disabled }: {
+  label: string
+  icon: typeof Pencil
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return <button type="button" className="button icon-button detail-action" title={label} aria-label={label} disabled={disabled} onClick={onClick}><Icon size={14} /></button>
+}
+
+function ProjectDialog({ onClose, onSave }: { onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  return <ImplementationDialog title="New project" submitLabel="Create project" onClose={onClose} onSubmit={() => onSave(name, description)}>
+    <div className="implementation-form-field">
+      <label htmlFor="implementation-project-name">Project name</label>
+      <input id="implementation-project-name" className="field" autoFocus required value={name} onChange={event => setName(event.target.value)} />
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="implementation-project-description">Description</label>
+      <textarea id="implementation-project-description" className="field" rows={3} value={description} onChange={event => setDescription(event.target.value)} />
+    </div>
+  </ImplementationDialog>
+}
+
+function TaskDialog({ task, onClose, onSave }: { task?: ImplementationTask; onClose: () => void; onSave: (changes: TaskChanges) => Promise<void> }) {
+  const [title, setTitle] = useState(task?.title ?? '')
+  const [description, setDescription] = useState(task?.description ?? '')
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'todo')
+  return <ImplementationDialog title={task ? 'Edit task' : 'New task'} submitLabel={task ? 'Save task' : 'Add task'} onClose={onClose}
+    onSubmit={() => onSave({ title, description, status })}>
+    <div className="implementation-form-field">
+      <label htmlFor="implementation-task-title">Task title</label>
+      <input id="implementation-task-title" className="field" autoFocus required value={title} onChange={event => setTitle(event.target.value)} />
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="implementation-task-description">Description</label>
+      <textarea id="implementation-task-description" className="field" rows={3} value={description} onChange={event => setDescription(event.target.value)} />
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="implementation-task-status">Task status</label>
+      <select id="implementation-task-status" className="field" value={status} onChange={event => {
+        const next = taskStatuses.find(value => value === event.target.value)
+        if (next) setStatus(next)
+      }}>{taskStatuses.map(value => <option key={value} value={value}>{taskLabels[value]}</option>)}</select>
+    </div>
+  </ImplementationDialog>
+}
+
+function DecisionNotes({ implementation, busy, onSave }: {
+  implementation: TopicImplementation
+  busy: boolean
+  onSave: (notes: string) => Promise<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [preview, setPreview] = useState(false)
+  const [draft, setDraft] = useState(implementation.notes)
+  return <section className="panel implementation-panel">
+    <div className="implementation-heading">
+      <h2>Technical decisions</h2>
+      {!editing && <button className="button" disabled={busy} onClick={() => {
+        setDraft(implementation.notes)
+        setPreview(false)
+        setEditing(true)
+      }}><Pencil size={15} /> Edit notes</button>}
+    </div>
+    {editing ? <>
+      <div className="segmented notes-mode" aria-label="Decision notes editor mode">
+        <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Write</button>
+        <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>Preview</button>
+      </div>
+      {preview ? <div className="editor-preview">{draft.trim() ? <Markdown content={draft} /> : <p className="muted">No notes to preview.</p>}</div>
+        : <textarea className="markdown-input" aria-label="Technical decision notes" rows={6} value={draft}
+          onChange={event => setDraft(event.target.value)} placeholder="Document technical decisions in Markdown…" />}
+      <div className="editor-actions">
+        <button className="button" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
+        <button className="button primary" disabled={busy} onClick={async () => { if (await onSave(draft)) setEditing(false) }}>Save notes</button>
+      </div>
+    </> : implementation.notes.trim() ? <Markdown content={implementation.notes} /> : <p className="muted">No technical decisions have been recorded.</p>}
+  </section>
+}
+
+export function Implementation({ topic, topics, service }: { topic: Topic; topics: readonly Topic[]; service: ImplementationService }) {
+  const [data, setData] = useState<ImplementationWorkspace>()
+  const [query, setQuery] = useSearchParams()
+  const [dialog, setDialog] = useState<DialogState>()
+  const [taskId, setTaskId] = useState<string>()
+  const [pendingOrder, setPendingOrder] = useState<{ implementationId: string; tasks: ImplementationTask[] }>()
+  const [collapsed, setCollapsed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [retry, setRetry] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    service.list().then(
+      result => { if (active) setData(result) },
+      problem => { if (active) setError(errorMessage(problem)) },
+    )
+    return () => { active = false }
+  }, [service, retry])
+
+  const project = data?.projects.find(item => item.id === query.get('project')) ?? data?.projects[0]
+  const implementation = data?.implementations.find(item => item.topicId === topic.id && item.projectId === project?.id)
+  const tasks = implementation
+    ? (pendingOrder?.implementationId === implementation.id ? pendingOrder.tasks : orderedTasks(data?.tasks ?? [], implementation.id))
+    : []
+  const artifacts = data?.artifacts.filter(item => item.implementationId === implementation?.id) ?? []
+  const selectedTask = tasks.find(task => task.id === taskId) ?? tasks[0]
+  const taskIndex = selectedTask ? tasks.indexOf(selectedTask) : -1
+  const progress = taskProgress(tasks)
+  const criteria = [...(selectedTask?.criteria ?? [])].sort((a, b) => a.order - b.order)
+  const dependencyOptions = tasks.filter(task => task.id !== selectedTask?.id && !selectedTask?.dependencyIds.includes(task.id))
+
+  function confirmRemoval(label: string, action: () => Promise<void>) {
+    setDialog({ kind: 'confirm', title: `Delete ${label}?`, message: `This ${label} will be permanently deleted.`, action })
+  }
+
+  function selectProject(id: string, replace = false) {
+    setQuery(params => {
+      if (id) params.set('project', id)
+      else params.delete('project')
+      return params
+    }, { replace })
+    setTaskId(undefined)
+    setCollapsed(false)
+    setMessage('')
+    setError('')
+  }
+
+  async function openProject(id: string) {
+    if (!id || busy) return
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      const created = await service.createImplementation(topic.id, id)
+      setData(await service.list())
+      selectProject(id)
+      if (created) setMessage('Implementation created.')
+    } catch (problem) {
+      setError(errorMessage(problem))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function commit(action: () => Promise<void>, status: string) {
+    setError('')
+    setMessage('')
+    await action()
+    setData(await service.list())
+    setMessage(status)
+  }
+
+  async function run(action: () => Promise<void>, status: string) {
+    if (busy) return false
+    setBusy(true)
+    try {
+      await commit(action, status)
+      return true
+    } catch (problem) {
+      setError(errorMessage(problem))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function reorderTasks(id: string, targetId: string) {
+    if (busy || !implementation) return
+    const from = tasks.findIndex(task => task.id === id)
+    const to = tasks.findIndex(task => task.id === targetId)
+    if (from < 0 || to < 0 || from === to) return
+    setTaskId(selectedTask?.id)
+    setPendingOrder({ implementationId: implementation.id, tasks: arrayMove(tasks, from, to) })
+    await run(() => service.moveTaskTo(id, targetId), 'Task order saved.')
+    setPendingOrder(undefined)
+  }
+
+  if (!data) return error
+    ? <section className="panel placeholder"><h2>Could not load implementations</h2><ImplementationNotice message={error} error />
+      <button className="button" onClick={() => { setError(''); setRetry(value => value + 1) }}>Try again</button></section>
+    : <p className="placeholder" role="status">Loading implementations…</p>
+
+  return <div className="implementation">
+    <div className="implementation-toolbar" role="group" aria-label="Implementation controls">
+      <label><span id="implementation-project-label">Project</span> <select className="field" aria-labelledby="implementation-project-label" disabled={!project || busy} value={implementation?.projectId ?? ''} onChange={event => void openProject(event.target.value)}>
+        {!implementation && <option value="" disabled>{project ? 'Select a project' : 'No projects available'}</option>}
+        {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+      </select></label>
+      {implementation && <div className="implementation-progress-controls">
+        <label className="implementation-status"><span id="implementation-status-label">Implementation status</span>
+          <select className="field" aria-labelledby="implementation-status-label" value={implementation.status} disabled={busy} onChange={event => {
+            const status = implementationStatuses.find(value => value === event.target.value)
+            if (status) void run(() => service.updateImplementation(implementation.id, { status }), 'Implementation status saved.')
+          }}>{implementationStatuses.map(status => <option key={status} value={status}>{implementationLabels[status]}</option>)}</select>
+        </label>
+        <button className="button implementation-delete" title="Delete implementation" aria-label="Delete implementation" disabled={busy} onClick={() => setDialog({
+          kind: 'confirm', title: 'Delete implementation?',
+          message: `This implementation for “${project?.name}” and all of its tasks, artifacts, and notes will be permanently deleted.`,
+          action: () => service.deleteImplementation(implementation.id),
+        })}><Trash2 size={17} /></button>
+        </div>}
+      <div className="implementation-controls">
+        <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'project' })}><Plus size={16} /> New project</button>
+        {project && implementation && <button className="button icon-button" disabled={busy} title="Delete project" aria-label="Delete project" onClick={() => setDialog({
+          kind: 'confirm', title: 'Delete project?', message: `“${project.name}” and all of its implementations, tasks, and artifacts will be permanently deleted.`,
+          action: async () => {
+            await service.deleteProject(project.id)
+            selectProject('', true)
+          },
+        })}><Trash2 size={17} /></button>}
+      </div>
+    </div>
+    <ImplementationNotice message={error} error />
+    <ImplementationNotice message={message} />
+    {!project && <section className="panel placeholder">
+      <ClipboardList className="purple" size={28} />
+      <h2>Create a project to begin</h2>
+      <p className="muted">Projects keep tasks and technical decisions together.</p>
+    </section>}
+    {implementation && <>
+      <div className="implementation-grid">
+        <section className="panel implementation-panel implementation-plan">
+          <div className="implementation-heading"><h2>Implementation plan</h2>
+            <button className="button primary" disabled={busy} onClick={() => setDialog({ kind: 'task' })}><Plus size={16} /> Add task</button>
+          </div>
+          {!tasks.length ? <p className="muted">No tasks yet. Add a task to start planning this implementation.</p>
+            : <SortableTaskList key={implementation.id} tasks={tasks} expandedId={collapsed ? undefined : selectedTask?.id}
+              busy={busy} onReorder={(id, targetId) => void reorderTasks(id, targetId)} onSelect={id => {
+                setCollapsed(selectedTask?.id === id && !collapsed)
+                setTaskId(id)
+              }} />}
+        </section>
+        <section className="panel implementation-panel implementation-progress">
+          <h2>Implementation progress</h2>
+          <div className="progress-summary">
+            <div className="progress-ring" role="progressbar" aria-label="Tasks completed"
+              aria-valuenow={progress.percent} aria-valuemin={0} aria-valuemax={100}>
+              <svg viewBox="0 0 100 100" aria-hidden="true">
+                <circle className="progress-track" cx="50" cy="50" r="45" />
+                {progress.percent > 0 && <circle className="progress-value" cx="50" cy="50" r="45"
+                  pathLength="100" strokeDasharray={`${progress.percent} 100`} />}
+              </svg>
+              <span>{progress.percent}%</span>
+            </div>
+            <ul>
+              <li><TaskMark status="done" /><span><strong>{progress.counts.done}</strong> Completed</span></li>
+              <li><TaskMark status="in_progress" /><span><strong>{progress.counts.in_progress}</strong> In progress</span></li>
+              <li><TaskMark status="todo" /><span><strong>{progress.counts.todo + progress.counts.blocked}</strong> Pending
+                {progress.counts.blocked > 0 && <small className="muted"> ({progress.counts.blocked} blocked)</small>}</span></li>
+            </ul>
+          </div>
+          <div className="implementation-config">
+            <label htmlFor="implementation-environment">Environment</label>
+            <select id="implementation-environment" className="field" disabled={busy} value={implementation.environment} onChange={event => {
+              const environment = environments.find(value => value === event.target.value)
+              if (environment) void run(() => service.updateImplementation(implementation.id, { environment }), 'Environment saved.')
+            }}>{environments.map(environment => <option key={environment} value={environment}>{environmentLabels[environment]}</option>)}</select>
+            <label htmlFor="implementation-branch">Branch</label>
+            <form className="implementation-branch" key={JSON.stringify([implementation.id, implementation.branch])} onSubmit={event => {
+              event.preventDefault()
+              const branch = fieldValue(new FormData(event.currentTarget), 'branch')
+              void run(() => service.updateImplementation(implementation.id, { branch }), 'Branch saved.')
+            }}>
+              <div className="field branch-field"><GitBranch size={16} aria-hidden="true" />
+                <input id="implementation-branch" name="branch" disabled={busy} defaultValue={implementation.branch} placeholder="Branch name" />
+              </div>
+              <button type="submit" className="button icon-button detail-action" disabled={busy} title="Save branch" aria-label="Save branch"><Check size={15} /></button>
+            </form>
+          </div>
+        </section>
+        <section className="panel implementation-panel implementation-details">
+          <div className="implementation-heading"><h2>Task details</h2>
+            {!collapsed && selectedTask && selectedTask.status !== 'done' && <button className="button mark-done" disabled={busy} onClick={() => void run(() => service.updateTask(selectedTask.id, {
+              title: selectedTask.title, description: selectedTask.description, status: 'done',
+            }), 'Task completed.')}><Check size={16} /> Mark as completed</button>}
+          </div>
+          <div id="implementation-task-details" hidden={collapsed || !selectedTask}>
+          {selectedTask && <>
+            <div className="task-detail-summary">
+              <h3 className="task-detail-title"><Code2 className="purple" size={19} /> {selectedTask.title}</h3>
+              <span className={`task-badge task-${selectedTask.status}`}>{taskLabels[selectedTask.status]}</span>
+            </div>
+            <p className={`task-description${selectedTask.description ? '' : ' muted'}`}>{selectedTask.description || 'No task description.'}</p>
+            <div className="task-context">
+              <section>
+                <h4>Acceptance criteria</h4>
+                {!!criteria.length && <ul className="implementation-detail-list">{criteria.map((criterion, index) => <li key={criterion.id} className="implementation-detail-row">
+                  <label className="criterion-label"><input type="checkbox" checked={criterion.completed} disabled={busy} onChange={event => {
+                    const completed = event.target.checked
+                    void run(() => service.updateCriterion(selectedTask.id, criterion.id, { completed }), 'Criterion saved.')
+                  }} /> <span>{criterion.description}</span></label>
+                  <div className="implementation-detail-actions">
+                    <DetailAction label="Move criterion up" icon={ArrowUp} disabled={busy || index === 0}
+                      onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'moveCriterion', id: criterion.id, direction: -1 }), 'Criterion moved.')} />
+                    <DetailAction label="Move criterion down" icon={ArrowDown} disabled={busy || index === criteria.length - 1}
+                      onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'moveCriterion', id: criterion.id, direction: 1 }), 'Criterion moved.')} />
+                    <DetailAction label="Edit criterion" icon={Pencil} disabled={busy} onClick={() => setDialog({ kind: 'criterion', taskId: selectedTask.id, criterion })} />
+                    <DetailAction label="Delete criterion" icon={Trash2} disabled={busy}
+                      onClick={() => confirmRemoval('criterion', () => service.changeTaskDetails(selectedTask.id, { kind: 'removeCriterion', id: criterion.id }))} />
+                  </div>
+                </li>)}</ul>}
+                <button type="button" className="button detail-add" disabled={busy} onClick={() => setDialog({ kind: 'criterion', taskId: selectedTask.id })}><Plus size={14} /> Add criterion</button>
+              </section>
+              <div>
+                <section>
+                  <h4>Dependencies</h4>
+                  {!!selectedTask.dependencyIds.length && <ul className="implementation-detail-list">{tasks.filter(task => selectedTask.dependencyIds.includes(task.id)).map(task => <li key={task.id} className="implementation-detail-row">
+                    <button type="button" className="implementation-resource-link" disabled={busy} onClick={() => {
+                      setTaskId(task.id)
+                      setCollapsed(false)
+                    }}><Link2 size={14} aria-hidden="true" /> {task.title}</button>
+                    <DetailAction label="Remove dependency" icon={Trash2} disabled={busy}
+                      onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'removeDependency', id: task.id }), 'Dependency removed.')} />
+                  </li>)}</ul>}
+                  <button type="button" className="button detail-add" disabled={busy || !dependencyOptions.length}
+                    title={dependencyOptions.length ? undefined : 'No other tasks available'}
+                    onClick={() => setDialog({ kind: 'dependency', taskId: selectedTask.id })}><Plus size={14} /> Add dependency</button>
+                </section>
+                <section>
+                  <h4>References</h4>
+                  {!!selectedTask.references.length && <ul className="implementation-detail-list">{selectedTask.references.map(reference => <li key={reference.id} className="implementation-detail-row">
+                    {reference.kind === 'topic'
+                      ? <Link className="implementation-resource-link" to={topicPath(reference.topicId)}>{topics.find(item => item.id === reference.topicId)?.title ?? 'Referenced topic'}</Link>
+                      : <ResourceLink url={reference.url} title={reference.title} />}
+                    <div className="implementation-detail-actions">
+                      <DetailAction label="Edit reference" icon={Pencil} disabled={busy} onClick={() => setDialog({ kind: 'reference', taskId: selectedTask.id, reference })} />
+                      <DetailAction label="Delete reference" icon={Trash2} disabled={busy}
+                        onClick={() => confirmRemoval('reference', () => service.changeTaskDetails(selectedTask.id, { kind: 'removeReference', id: reference.id }))} />
+                    </div>
+                  </li>)}</ul>}
+                  <button type="button" className="button detail-add" disabled={busy} onClick={() => setDialog({ kind: 'reference', taskId: selectedTask.id })}><Plus size={14} /> Add reference</button>
+                </section>
+              </div>
+            </div>
+            <div className="task-controls">
+              <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'task', task: selectedTask })}><Pencil size={15} /> Edit task</button>
+              <button className="button icon-button" aria-label="Move task up" title="Move task up" disabled={busy || taskIndex === 0}
+                onClick={() => { const target = tasks[taskIndex - 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowUp size={17} /></button>
+              <button className="button icon-button" aria-label="Move task down" title="Move task down" disabled={busy || taskIndex === tasks.length - 1}
+                onClick={() => { const target = tasks[taskIndex + 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowDown size={17} /></button>
+              <button className="button icon-button task-delete" aria-label="Delete task" title="Delete task" disabled={busy} onClick={() => setDialog({
+                kind: 'confirm', title: 'Delete task?', message: `“${selectedTask.title}” will be permanently deleted.`,
+                action: () => service.deleteTask(selectedTask.id),
+              })}><Trash2 size={16} /></button>
+            </div>
+          </>}
+          </div>
+          {(collapsed || !selectedTask) && <p className="muted">{tasks.length ? 'Select a task to view its details.' : 'Task details appear here after you add a task.'}</p>}
+        </section>
+        <section className="panel implementation-panel implementation-artifacts" aria-labelledby="implementation-artifacts-title">
+          <h2 id="implementation-artifacts-title">Artifacts and resources</h2>
+          {artifacts.length ? <ul className="implementation-detail-list artifact-list">{artifacts.map(artifact => {
+            const Icon = artifactIcons[artifact.type]
+            return <li key={artifact.id} className="implementation-detail-row">
+              <Icon className="purple" size={17} aria-hidden="true" />
+              <div className="artifact-details">
+                <ResourceLink url={artifact.url} title={artifact.title} />
+                <small className="muted">{artifactLabels[artifact.type]}</small>
+                {artifact.description && <p>{artifact.description}</p>}
+              </div>
+              <div className="implementation-detail-actions">
+                <DetailAction label="Edit artifact" icon={Pencil} disabled={busy} onClick={() => setDialog({ kind: 'artifact', implementationId: implementation.id, artifact })} />
+                <DetailAction label="Delete artifact" icon={Trash2} disabled={busy} onClick={() => confirmRemoval('artifact', () => service.deleteArtifact(artifact.id))} />
+              </div>
+            </li>
+          })}</ul> : <p className="muted artifact-caption">No artifacts yet.</p>}
+          <button className="button artifact-add" disabled={busy} onClick={() => setDialog({ kind: 'artifact', implementationId: implementation.id })}><Plus size={17} /> Add artifact</button>
+        </section>
+      </div>
+      <DecisionNotes key={implementation.id} implementation={implementation} busy={busy}
+          onSave={notes => run(() => service.updateImplementation(implementation.id, { notes }), 'Technical decisions saved.')} />
+    </>}
+    {dialog?.kind === 'project' && <ProjectDialog onClose={() => setDialog(undefined)} onSave={(name, description) => commit(async () => {
+      const created = await service.createProject(name, description, topic.id)
+      selectProject(created.id)
+    }, 'Project and implementation created.')} />}
+    {dialog?.kind === 'task' && implementation && <TaskDialog task={dialog.task} onClose={() => setDialog(undefined)} onSave={changes => commit(async () => {
+      if (dialog.task) await service.updateTask(dialog.task.id, changes)
+      else {
+        setTaskId(await service.createTask(implementation.id, changes))
+        setCollapsed(false)
+      }
+    }, dialog.task ? 'Task saved.' : 'Task added.')} />}
+    {dialog?.kind === 'criterion' && <ImplementationDialog title={dialog.criterion ? 'Edit criterion' : 'Add criterion'} submitLabel="Save criterion"
+      onClose={() => setDialog(undefined)} onSubmit={fields => commit(() => {
+        const description = fieldValue(fields, 'description')
+        return dialog.criterion
+          ? service.updateCriterion(dialog.taskId, dialog.criterion.id, { description })
+          : service.addCriterion(dialog.taskId, description)
+      }, 'Criterion saved.')}>
+      <div className="implementation-form-field">
+        <label htmlFor="criterion-description">Description</label>
+        <textarea className="field" id="criterion-description" name="description" autoFocus required rows={3} defaultValue={dialog.criterion?.description} />
+      </div>
+    </ImplementationDialog>}
+    {dialog?.kind === 'dependency' && <ImplementationDialog title="Add dependency" submitLabel="Add dependency" onClose={() => setDialog(undefined)}
+      onSubmit={fields => commit(() => service.changeTaskDetails(dialog.taskId, { kind: 'addDependency', id: fieldValue(fields, 'task') }), 'Dependency added.')}>
+      <div className="implementation-form-field">
+        <label htmlFor="dependency-task">Depends on</label>
+        <select className="field" id="dependency-task" name="task" autoFocus required defaultValue="">
+          <option value="" disabled>Select a task</option>
+          {dependencyOptions.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
+        </select>
+      </div>
+    </ImplementationDialog>}
+    {dialog?.kind === 'reference' && <ReferenceDialog topics={topics} reference={dialog.reference} onClose={() => setDialog(undefined)}
+      onSave={input => commit(() => service.saveReference(dialog.taskId, input, dialog.reference?.id), 'Reference saved.')} />}
+    {dialog?.kind === 'artifact' && <ArtifactDialog artifact={dialog.artifact} onClose={() => setDialog(undefined)}
+      onSave={input => commit(() => service.saveArtifact(dialog.implementationId, input, dialog.artifact?.id), 'Artifact saved.')} />}
+    {dialog?.kind === 'confirm' && <ImplementationDialog title={dialog.title} submitLabel="Delete" destructive
+      onClose={() => setDialog(undefined)} onSubmit={() => commit(dialog.action, 'Deleted.')}><p>{dialog.message}</p></ImplementationDialog>}
+  </div>
+}

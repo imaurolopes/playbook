@@ -106,7 +106,7 @@ describe('topic relationships', () => {
     expect(await repository.readWorkspace()).toEqual({ topics: legacy, relationships: [] })
     expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
     const edge = await add('user-child', 'user-root')
-    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toEqual({ version: 2, topics: legacy, relationships: [edge] })
+    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 3, topics: JSON.parse(raw), relationships: [edge] })
     const reopened = new LocalStorageTopicRepository(() => storage)
     expect(await reopened.readWorkspace()).toEqual({ topics: legacy, relationships: [edge] })
     await reopened.deleteRelationship(edge.id)
