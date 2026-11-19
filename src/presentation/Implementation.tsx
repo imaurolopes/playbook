@@ -9,7 +9,7 @@ import type { ImplementationService } from '../application/implementation-servic
 import {
   artifactTypes, environments, implementationStatuses, orderedTasks, taskProgress, taskStatuses, webUrl,
   type AcceptanceCriterion, type ArtifactDetails, type ArtifactType, type Environment, type ImplementationArtifact,
-  type ReferenceDetails, type TaskReference,
+  type Project, type ReferenceDetails, type TaskReference,
   type ImplementationStatus, type ImplementationTask, type TaskStatus, type TopicImplementation,
 } from '../domain/implementation'
 import type { Topic } from '../domain/topic'
@@ -110,7 +110,7 @@ function ImplementationNotice({ message, error = false }: { message: string; err
   </div>
 }
 
-type DialogState = { kind: 'project' } | { kind: 'task'; task?: ImplementationTask } |
+type DialogState = { kind: 'project'; project?: Project } | { kind: 'task'; task?: ImplementationTask } |
   { kind: 'criterion'; taskId: string; criterion?: AcceptanceCriterion } |
   { kind: 'dependency'; taskId: string } |
   { kind: 'reference'; taskId: string; reference?: TaskReference } |
@@ -262,10 +262,11 @@ function DetailAction({ label, icon: Icon, onClick, disabled }: {
   return <button type="button" className="button icon-button detail-action" title={label} aria-label={label} disabled={disabled} onClick={onClick}><Icon size={14} /></button>
 }
 
-function ProjectDialog({ onClose, onSave }: { onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  return <ImplementationDialog title="New project" submitLabel="Create project" onClose={onClose} onSubmit={() => onSave(name, description)}>
+function ProjectDialog({ project, onClose, onSave }: { project?: Project; onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
+  const [name, setName] = useState(project?.name ?? '')
+  const [description, setDescription] = useState(project?.description ?? '')
+  return <ImplementationDialog title={project ? 'Edit project' : 'New project'} submitLabel={project ? 'Save project' : 'Create project'}
+    onClose={onClose} onSubmit={() => onSave(name, description)}>
     <div className="implementation-form-field">
       <label htmlFor="implementation-project-name">Project name</label>
       <input id="implementation-project-name" className="field" autoFocus required value={name} onChange={event => setName(event.target.value)} />
@@ -440,10 +441,14 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
 
   return <div className="implementation">
     <div className="implementation-toolbar" role="group" aria-label="Implementation controls">
-      <label><span id="implementation-project-label">Project</span> <select className="field" aria-labelledby="implementation-project-label" disabled={!project || busy} value={implementation?.projectId ?? ''} onChange={event => void openProject(event.target.value)}>
-        {!implementation && <option value="" disabled>{project ? 'Select a project' : 'No projects available'}</option>}
-        {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select></label>
+      <div className="implementation-project-control">
+        <label><span id="implementation-project-label">Project</span> <select className="field" aria-labelledby="implementation-project-label" disabled={!project || busy} value={implementation?.projectId ?? ''} onChange={event => void openProject(event.target.value)}>
+          {!implementation && <option value="" disabled>{project ? 'Select a project' : 'No projects available'}</option>}
+          {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select></label>
+        <button type="button" className="button icon-button" aria-label="Edit project" title="Edit project"
+          disabled={!implementation || !project || busy} onClick={() => setDialog({ kind: 'project', project })}><Pencil size={16} /></button>
+      </div>
       {implementation && <div className="implementation-progress-controls">
         <label className="implementation-status"><span id="implementation-status-label">Implementation status</span>
           <select className="field" aria-labelledby="implementation-status-label" value={implementation.status} disabled={busy} onChange={event => {
@@ -460,7 +465,7 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
       <div className="implementation-controls">
         <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'project' })}><Plus size={16} /> New project</button>
         {project && implementation && <button className="button icon-button" disabled={busy} title="Delete project" aria-label="Delete project" onClick={() => setDialog({
-          kind: 'confirm', title: 'Delete project?', message: `“${project.name}” and all of its implementations, tasks, and artifacts will be permanently deleted.`,
+          kind: 'confirm', title: 'Delete project?', message: `“${project.name}” and its implementations, tasks, artifacts, and instruction drafts will be permanently deleted.`,
           action: async () => {
             await service.deleteProject(project.id)
             selectProject('', true)
@@ -628,10 +633,14 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
       <DecisionNotes key={implementation.id} implementation={implementation} busy={busy}
           onSave={notes => run(() => service.updateImplementation(implementation.id, { notes }), 'Technical decisions saved.')} />
     </>}
-    {dialog?.kind === 'project' && <ProjectDialog onClose={() => setDialog(undefined)} onSave={(name, description) => commit(async () => {
-      const created = await service.createProject(name, description, topic.id)
-      selectProject(created.id)
-    }, 'Project and implementation created.')} />}
+    {dialog?.kind === 'project' && <ProjectDialog project={dialog.project} onClose={() => setDialog(undefined)}
+      onSave={(name, description) => commit(async () => {
+        if (dialog.project) await service.updateProject(dialog.project.id, name, description)
+        else {
+          const created = await service.createProject(name, description, topic.id)
+          selectProject(created.id)
+        }
+      }, dialog.project ? 'Project updated.' : 'Project and implementation created.')} />}
     {dialog?.kind === 'task' && implementation && <TaskDialog task={dialog.task} onClose={() => setDialog(undefined)} onSave={changes => commit(async () => {
       if (dialog.task) await service.updateTask(dialog.task.id, changes)
       else {

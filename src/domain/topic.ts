@@ -1,4 +1,6 @@
 ﻿export const scopes = ['Core', 'Organization', 'Project'] as const
+import type { TopicMetadata } from './topic-metadata'
+
 export type TopicScope = (typeof scopes)[number]
 
 export interface Topic {
@@ -9,6 +11,7 @@ export interface Topic {
   content: string
   scope: TopicScope
   sourceTopicId?: string
+  metadata?: TopicMetadata
   createdAt: string
   updatedAt: string
 }

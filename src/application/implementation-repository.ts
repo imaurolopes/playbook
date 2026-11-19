@@ -10,6 +10,7 @@ export interface ImplementationWorkspace {
 
 export type ImplementationChanges = Partial<Pick<TopicImplementation, 'status' | 'notes' | 'environment'>> & { branch?: string | null }
 export type TaskChanges = Pick<ImplementationTask, 'title' | 'description' | 'status'>
+export type ProjectChanges = Pick<Project, 'name' | 'description'>
 
 export type TaskDetailChange =
   | { kind: 'addCriterion'; criterion: Omit<AcceptanceCriterion, 'order'> }
@@ -24,6 +25,7 @@ export type TaskDetailChange =
 export interface ImplementationRepository {
   readImplementations(): Promise<ImplementationWorkspace>
   createProject(project: Project, implementation?: TopicImplementation): Promise<void>
+  updateProject(id: string, changes: ProjectChanges): Promise<void>
   deleteProject(id: string): Promise<void>
   createImplementation(implementation: TopicImplementation): Promise<boolean>
   updateImplementation(id: string, changes: ImplementationChanges): Promise<void>

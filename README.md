@@ -22,6 +22,15 @@ npm run preview
 
 The production build is written to `dist/`. For static hosting, configure the host to serve `index.html` for client-side topic routes.
 
+Run the browser integration suite with Chromium. It starts its own local server and uses isolated browser storage.
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+Set `PLAYBOOK_BROWSER_CHANNEL=chrome` to run against an installed Google Chrome instead.
+
 ## Project layout
 
 - `src/domain/` holds the topic and relationship models and their validation rules.
@@ -40,4 +49,4 @@ Use **Implementation** to create or select a project. This opens the current top
 
 The Azure Data Platform and AWS Data Platform example projects are supplied when implementation storage is first initialized. Deleting a task affects that task alone. Deleting an implementation removes its tasks and notes. Deleting a project removes its implementations and their tasks, and deleting a topic removes its implementations across projects as well as its topic relationships. Each deletion is saved in one write.
 
-Data is stored per browser and origin. Save edits before switching topics. Agent Instructions, Version History, and Metadata are navigation placeholders. Core, Organization, and Project are classifications in this sprint.
+Data is stored per browser and origin. Save Content and Metadata edits before switching topics. Agent Instructions drafts save locally and regenerate on request. Version History captures topic knowledge and metadata independently from project-specific work. Core, Organization, and Project are topic classifications.

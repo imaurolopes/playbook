@@ -17,6 +17,10 @@ function required(value: string, message: string) {
   return trimmed
 }
 
+function cleanProject(name: string, description: string) {
+  return { name: required(name, 'Enter a project name.'), description: description.trim() }
+}
+
 function cleanTask(input: TaskChanges): TaskChanges {
   return { ...input, title: required(input.title, 'Enter a task title.'), description: input.description.trim() }
 }
@@ -55,9 +59,13 @@ export class ImplementationService {
   }
 
   async createProject(name: string, description: string, topicId?: string) {
-    const project = { ...newRecord(), name: required(name, 'Enter a project name.'), description: description.trim() }
+    const project = { ...newRecord(), ...cleanProject(name, description) }
     await this.repository.createProject(project, topicId === undefined ? undefined : newImplementation(topicId, project.id))
     return project
+  }
+
+  async updateProject(id: string, name: string, description: string) {
+    await this.repository.updateProject(id, cleanProject(name, description))
   }
 
   deleteProject(id: string) {

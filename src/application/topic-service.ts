@@ -1,6 +1,9 @@
 ﻿import type { Topic, TopicInput } from '../domain/topic'
 import type { RelationshipInput } from '../domain/topic-relationship'
 import type { TopicRepository } from './topic-repository'
+import { cleanTopicMetadata, type TopicMetadata } from '../domain/topic-metadata'
+
+const localAuthor = 'Local user'
 
 export class TopicService {
   constructor(private readonly repository: TopicRepository) {}
@@ -23,13 +26,15 @@ export class TopicService {
       return this.repository.create({ ...data, id: crypto.randomUUID(), createdAt: now })
     }
 
-    const existing = await this.repository.getById(id)
-    if (!existing) throw new Error('This topic no longer exists.')
-    return this.repository.update({ ...existing, ...data })
+    return this.repository.update({ id, ...data })
   }
 
   delete(id: string) {
     return this.repository.delete(id)
+  }
+
+  async saveMetadata(topicId: string, metadata: TopicMetadata) {
+    return this.repository.updateMetadata(topicId, cleanTopicMetadata(metadata))
   }
 
   addRelationship(input: RelationshipInput) {
@@ -45,5 +50,19 @@ export class TopicService {
 
   removeRelationship(id: string) {
     return this.repository.deleteRelationship(id)
+  }
+
+  versions(topicId: string) {
+    return this.repository.listVersions(topicId)
+  }
+
+  async createVersion(topicId: string, summary: string) {
+    const message = summary.trim()
+    if (!message) throw new Error('Enter a change summary.')
+    return this.repository.createVersion(topicId, message, localAuthor)
+  }
+
+  restoreVersion(topicId: string, versionId: string) {
+    return this.repository.restoreVersion(topicId, versionId, localAuthor)
   }
 }

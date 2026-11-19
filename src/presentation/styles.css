@@ -1,6 +1,9 @@
 ﻿@import "tailwindcss";
 @import "./dependencies.css";
 @import "./implementation.css";
+@import "./agent-instructions.css";
+@import "./version-history.css";
+@import "./topic-metadata.css";
 @source "../";
 
 @theme {

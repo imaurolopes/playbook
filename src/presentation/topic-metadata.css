@@ -1,0 +1,47 @@
+.topic-metadata { container: topic-metadata / inline-size; min-width: 0; }
+.metadata-grid {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px 16px;
+}
+.metadata-column, .metadata-card { display: grid; gap: 12px; min-width: 0; }
+.metadata-card { padding: 14px 16px; overflow-wrap: anywhere; }
+.metadata-card p { margin: 0; }
+.metadata-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.metadata-heading .button { min-height: 34px; }
+.metadata-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+.metadata-field { display: grid; min-width: 0; gap: 4px; }
+.metadata-field .field, .metadata-add-value .field { width: 100%; min-width: 0; }
+.metadata-field > label, label.metadata-field { font-weight: 600; }
+.metadata-field > p { white-space: pre-wrap; }
+.metadata-card[aria-label="Tags"] .metadata-field > label { font-size: 1.125rem; font-weight: 700; }
+.metadata-hint { font-size: .875rem; }
+.metadata-add-value { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.metadata-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0 0 3px; list-style: none; }
+.metadata-chips li {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 2px 4px 2px 9px; border-radius: 99px; background: #2d2249; border: 1px solid #473166; font-size: .87rem;
+}
+.metadata-chips li span { min-width: 0; }
+.metadata-chips button { border-radius: 50%; display: grid; place-items: center; width: 24px; height: 24px; flex: none; }
+.metadata-chips button:hover { background: #59417b; }
+.metadata-audit, .metadata-properties { display: grid; gap: 8px; margin: 0; padding: 0; }
+.metadata-audit > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 1.4fr); gap: 8px; }
+.metadata-audit dt { color: var(--muted); }
+.metadata-audit dd { min-width: 0; margin: 0; }
+.metadata-properties { list-style: none; }
+.metadata-properties li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: end; }
+.metadata-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: end; flex-wrap: wrap; gap: 8px 12px; }
+.metadata-actions p { margin: 0; }
+
+@container topic-metadata (width < 650px) {
+  .metadata-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@container topic-metadata (width < 350px) {
+  .metadata-pair { grid-template-columns: minmax(0, 1fr); }
+}

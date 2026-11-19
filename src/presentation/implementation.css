@@ -30,7 +30,9 @@
   gap: 10px;
 }
 
-.implementation-toolbar > label { flex: 1 1 190px; max-width: 300px; }
+.implementation-project-control { display: flex; align-items: center; gap: 7px; flex: 1 1 220px; max-width: 335px; min-width: 0; }
+.implementation-project-control > label { flex: 1; }
+.implementation-project-control > button { flex: none; }
 .implementation-progress-controls { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .implementation-status select { min-width: 105px; }
 
@@ -347,7 +349,7 @@
 }
 
 @container implementation (max-width: 430px) {
-  .implementation-toolbar > label { flex-basis: 100%; max-width: none; }
+  .implementation-project-control { flex-basis: 100%; max-width: none; }
   .implementation-controls { margin-left: 0; }
   .implementation-heading h2 { font-size: 1.125rem; }
   .implementation-task { gap: 6px; padding-inline-end: 8px; }
