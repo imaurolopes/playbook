@@ -1,0 +1,76 @@
+﻿import { beforeEach, describe, expect, it } from 'vitest'
+import type { Topic } from '../domain/topic'
+import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-topic-repository'
+
+const timestamp = '2026-11-19T12:00:00.000Z'
+const root: Topic = { id: 'root', title: 'Root', description: '', content: '', scope: 'Core', createdAt: timestamp, updatedAt: timestamp }
+
+describe('LocalStorageTopicRepository', () => {
+  const entries = new Map<string, string>()
+  const storage = {
+    getItem: (key: string) => entries.get(key) ?? null,
+    setItem: (key: string, value: string) => { entries.set(key, value) },
+  }
+  const repository = new LocalStorageTopicRepository(() => storage, [root])
+
+  beforeEach(() => entries.clear())
+
+  it('initializes once and keeps an initialized empty workspace empty', async () => {
+    expect(await repository.list()).toEqual([root])
+    await repository.delete(root.id)
+    const reopened = new LocalStorageTopicRepository(() => storage, [root])
+    expect(await reopened.list()).toEqual([])
+  })
+
+  it('creates, retrieves, and updates a topic across repository instances', async () => {
+    const child: Topic = { ...root, id: 'child', parentId: root.id, title: 'Child' }
+    await repository.create(child)
+    expect(await repository.getById(child.id)).toEqual(child)
+    const updated = { ...child, title: 'Updated', content: '## Context' }
+    await repository.update(updated)
+    expect(await new LocalStorageTopicRepository(() => storage).getById(child.id)).toEqual(updated)
+    expect(await repository.getById('missing')).toBeUndefined()
+  })
+
+  it('rejects duplicate, missing, and cyclic operations without changing data', async () => {
+    const child: Topic = { ...root, id: 'child', parentId: root.id }
+    await repository.create(child)
+    await expect(repository.create(child)).rejects.toThrow('already exists')
+    await expect(repository.create({ ...root, id: 'orphan', parentId: 'missing' })).rejects.toThrow('existing parent')
+    await expect(repository.update({ ...root, parentId: child.id })).rejects.toThrow('descendants')
+    await expect(repository.update({ ...root, id: 'missing' })).rejects.toThrow('no longer exists')
+    await expect(repository.delete('missing')).rejects.toThrow('no longer exists')
+    expect(await repository.list()).toEqual([root, child])
+  })
+
+  it('promotes direct children when deleting a parent and preserves deeper descendants', async () => {
+    await repository.create({ ...root, id: 'middle', parentId: root.id })
+    await repository.create({ ...root, id: 'child', parentId: 'middle' })
+    await repository.create({ ...root, id: 'grandchild', parentId: 'child' })
+    await repository.delete('middle')
+    expect(await repository.getById('middle')).toBeUndefined()
+    expect((await repository.getById('child'))?.parentId).toBe(root.id)
+    expect((await repository.getById('grandchild'))?.parentId).toBe('child')
+    await repository.delete(root.id)
+    expect((await repository.getById('child'))?.parentId).toBeUndefined()
+  })
+
+  it.each(['{invalid', '{}', JSON.stringify([{ ...root, parentId: root.id }])])('preserves malformed storage: %s', async raw => {
+    entries.set(TOPIC_STORAGE_KEY, raw)
+    await expect(repository.list()).rejects.toThrow('original data has been preserved')
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
+  })
+
+  it('reports unavailable reads and failed writes', async () => {
+    const unavailable = new LocalStorageTopicRepository(() => { throw new Error('Blocked') })
+    await expect(unavailable.list()).rejects.toThrow('storage is unavailable')
+
+    await repository.list()
+    const readOnly = new LocalStorageTopicRepository(() => ({
+      ...storage,
+      setItem: () => { throw new Error('Quota exceeded') },
+    }))
+    await expect(readOnly.update({ ...root, title: 'Changed' })).rejects.toThrow('could not save')
+    expect(await repository.getById(root.id)).toEqual(root)
+  })
+})
