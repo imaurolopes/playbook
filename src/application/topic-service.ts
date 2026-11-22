@@ -60,6 +60,10 @@ export class TopicService {
     })
   }
 
+  editRelationship(id: string, input: RelationshipInput) {
+    return this.repository.updateRelationship(id, { ...input, description: input.description?.trim() || undefined }, new Date().toISOString())
+  }
+
   removeRelationship(id: string) {
     return this.repository.deleteRelationship(id)
   }

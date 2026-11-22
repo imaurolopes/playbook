@@ -33,17 +33,21 @@ const tabs = [
   ['metadata', 'Metadata', Info],
 ] as const
 
+const topicTimestamp = new Intl.DateTimeFormat('en-US', {
+  month: 'short', day: '2-digit', year: 'numeric',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+})
+
 function TopicSummary({ topic, workspace }: { topic: Topic; workspace: TopicWorkspace }) {
   const groups = topicRelationshipGroups(topic.id, workspace.topics, workspace.relationships)
   const related = groupDetails.flatMap(({ key, label }) => groups[key].map(row => ({ ...row, label })))
-  const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
   return <aside className="topic-summary" aria-label="Topic summary">
     <section className="panel summary-panel">
       <h2>Quick view</h2>
       <dl>
         <div><dt><CheckCircle2 className="green" /> Storage</dt><dd>Saved locally</dd></div>
-        <div><dt><CalendarDays /> Updated</dt><dd><time dateTime={topic.updatedAt}>{date.format(new Date(topic.updatedAt))}</time></dd></div>
-        <div><dt><CalendarDays /> Created</dt><dd><time dateTime={topic.createdAt}>{date.format(new Date(topic.createdAt))}</time></dd></div>
+        <div><dt><CalendarDays /> Updated</dt><dd><time dateTime={topic.updatedAt}>{topicTimestamp.format(new Date(topic.updatedAt))}</time></dd></div>
+        <div><dt><CalendarDays /> Created</dt><dd><time dateTime={topic.createdAt}>{topicTimestamp.format(new Date(topic.createdAt))}</time></dd></div>
       </dl>
     </section>
     <section className="panel summary-panel">
@@ -69,10 +73,11 @@ interface TopicRouteProps {
   onSaveMetadata: (topicId: string, metadata: Metadata) => Promise<Topic>
   onDelete: (id: string) => Promise<void>
   onAddRelationship: (input: RelationshipInput) => Promise<void>
+  onEditRelationship: (id: string, input: RelationshipInput) => Promise<void>
   onRemoveRelationship: (id: string) => Promise<void>
 }
 
-function TopicScreen({ topic, workspace, topicService, implementationService, instructionService, knowledgeService, onRestored, onSave, onSaveMetadata, onDelete, onAddRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
+function TopicScreen({ topic, workspace, topicService, implementationService, instructionService, knowledgeService, onRestored, onSave, onSaveMetadata, onDelete, onAddRelationship, onEditRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
   const { topics, relationships } = workspace
   const { tab } = useParams()
   const { search } = useLocation()
@@ -146,7 +151,7 @@ function TopicScreen({ topic, workspace, topicService, implementationService, in
         </article>}
       <TopicSummary topic={topic} workspace={workspace} />
     </div>
-    {slug === 'dependencies' && <Dependencies topic={topic} topics={topics} relationships={relationships} onAdd={onAddRelationship} onRemove={onRemoveRelationship} />}
+    {slug === 'dependencies' && <Dependencies topic={topic} topics={topics} relationships={relationships} onAdd={onAddRelationship} onEdit={onEditRelationship} onRemove={onRemoveRelationship} />}
     {slug === 'implementation' && <Implementation topic={topic} topics={topics} service={implementationService} />}
     {slug === 'agent-instructions' && <AgentInstructions topic={topic} service={instructionService} />}
     {slug === 'version-history' && <VersionHistory topic={topic} workspace={workspace} service={topicService} hasOpenEditor={editing} onRestored={restored => {
@@ -260,6 +265,11 @@ export function App({ service, implementationService, instructionService, knowle
     setWorkspace(current => current && { ...current, relationships: [...current.relationships, edge] })
   }
 
+  async function editRelationship(id: string, input: RelationshipInput) {
+    const updated = await service.editRelationship(id, input)
+    setWorkspace(current => current && { ...current, relationships: current.relationships.map(edge => edge.id === id ? updated : edge) })
+  }
+
   async function removeRelationship(id: string) {
     await service.removeRelationship(id)
     setWorkspace(current => current && { ...current, relationships: current.relationships.filter(edge => edge.id !== id) })
@@ -273,7 +283,7 @@ export function App({ service, implementationService, instructionService, knowle
   const defaultTopic = topics?.find(topic => topic.id === 'cdc') ?? topics?.[0]
   const topicRouteProps = workspace && {
     workspace, topicService: service, onRestored: setWorkspace, implementationService, instructionService, knowledgeService, onSave: save, onSaveMetadata: saveMetadata, onDelete: remove,
-    onAddRelationship: addRelationship, onRemoveRelationship: removeRelationship,
+    onAddRelationship: addRelationship, onEditRelationship: editRelationship, onRemoveRelationship: removeRelationship,
   }
   return <Shell count={topics?.length} trashCount={workspace?.trashedTopics.length ?? 0} focusSearch={focusSearch}
     topicsSidebar={inTopics ? <TopicList {...listProps} /> : undefined}>

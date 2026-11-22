@@ -108,7 +108,7 @@
 .relationship-type svg { color: var(--purple); }
 .type-dependencies { background: #292941; }
 .type-dependents { background: #302340; }
-.relationship-table .remove-relationship { min-height: 30px; padding: 4px 7px; }
+.relationship-actions .icon-button { min-height: 30px; padding: 4px 7px; }
 .relationship-table .remove-relationship:hover { color: #ffb3bd; }
 .relationship-empty { padding: 16px; }
 .relationship-status { margin: 0 0 8px; color: var(--green); }
@@ -169,3 +169,5 @@
   .graph-edge small { display: none; }
   .relationship-table { min-width: 520px; }
 }
+
+.relationship-actions { display: flex; align-items: center; justify-content: center; gap: 6px; }

@@ -1,5 +1,5 @@
 import type { Topic, TrashedTopic } from '../domain/topic'
-import type { TopicRelationship } from '../domain/topic-relationship'
+import type { RelationshipInput, TopicRelationship } from '../domain/topic-relationship'
 import type { TopicInput } from '../domain/topic'
 import type { TopicVersion } from '../domain/topic-version'
 import type { TopicMetadata } from '../domain/topic-metadata'
@@ -29,6 +29,7 @@ export interface TopicRepository {
   deletePermanently(id: string): Promise<void>
   emptyTrash(): Promise<void>
   createRelationship(relationship: TopicRelationship): Promise<TopicRelationship>
+  updateRelationship(id: string, input: RelationshipInput, updatedAt: string): Promise<TopicRelationship>
   deleteRelationship(id: string): Promise<void>
   listVersions(topicId: string): Promise<TopicVersion[]>
   createVersion(topicId: string, summary: string, author: string): Promise<TopicVersion>

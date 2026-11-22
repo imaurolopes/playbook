@@ -8,7 +8,7 @@ import { orderedTasks, validateTaskDependency, type ArtifactDetails, type Implem
 import { initialImplementations, readStoredImplementations } from './stored-implementations'
 import type { TopicRepository, TopicRestoreResult, TopicWorkspace } from '../application/topic-repository'
 import { isTrashed, type Topic, type TopicInput } from '../domain/topic'
-import { otherTopicId, relationshipTypes, relationshipsFor, validateRelationship, type RelationshipType, type TopicRelationship } from '../domain/topic-relationship'
+import { otherTopicId, relationshipTypes, relationshipsFor, validateRelationship, type RelationshipInput, type RelationshipType, type TopicRelationship } from '../domain/topic-relationship'
 import { captureTopicSnapshot, type TopicSnapshot, type TopicVersion, type VersionRelationship } from '../domain/topic-version'
 import { readTopicVersions } from './stored-topic-versions'
 import { isTopicMetadata, type TopicMetadata } from '../domain/topic-metadata'
@@ -533,6 +533,20 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     workspace.relationships.push(relationship)
     this.write(workspace)
     return relationship
+  }
+
+  async updateRelationship(id: string, input: RelationshipInput, updatedAt: string) {
+    const workspace = this.read()
+    const index = workspace.relationships.findIndex(edge => edge.id === id)
+    const existing = workspace.relationships[index]
+    if (!existing) throw new Error('This relationship no longer exists.')
+    requireActiveTopic(workspace, existing.sourceTopicId)
+    requireActiveTopic(workspace, existing.targetTopicId)
+    validateRelationship(activeTopicIds(workspace.topics), workspace.relationships.filter(edge => edge.id !== id), input)
+    const updated = { ...existing, ...input, id: existing.id, createdAt: existing.createdAt, updatedAt }
+    workspace.relationships[index] = updated
+    this.write(workspace)
+    return updated
   }
 
   async deleteRelationship(id: string) {

@@ -42,6 +42,37 @@ describe('topic relationships', () => {
     expect((await repository.readWorkspace()).relationships).toEqual([])
   })
 
+  it('edits endpoints, direction, type and description in place across reloads', async () => {
+    const edge = await add('kafka', 'cdc')
+    const reversed = await service.editRelationship(edge.id, {
+      sourceTopicId: 'cdc', targetTopicId: 'kafka', type: 'dependency', description: '  Reversed  ',
+    })
+    expect(reversed).toMatchObject({ id: edge.id, createdAt: edge.createdAt, sourceTopicId: 'cdc', targetTopicId: 'kafka', description: 'Reversed' })
+    const updated = await service.editRelationship(edge.id, {
+      sourceTopicId: 'cdc', targetTopicId: 'data', type: 'related', description: '  ',
+    })
+    const reopened = new LocalStorageTopicRepository(() => storage)
+    expect((await reopened.readWorkspace()).relationships).toEqual([updated])
+    expect(updated).toMatchObject({ id: edge.id, createdAt: edge.createdAt, type: 'related', targetTopicId: 'data' })
+    expect(updated.description).toBeUndefined()
+  })
+
+  it('rejects edits that create duplicates, self-references, cycles or links to trashed topics', async () => {
+    const edge = await add('cdc', 'data')
+    await add('data', 'kafka')
+    await add('cdc', 'kafka', 'related')
+    await service.delete('quality')
+    const before = entries.get(TOPIC_STORAGE_KEY)
+    await expect(service.editRelationship(edge.id, { ...edge, targetTopicId: 'cdc' })).rejects.toThrow('itself')
+    await expect(service.editRelationship(edge.id, { ...edge, sourceTopicId: 'kafka', targetTopicId: 'data' })).rejects.toThrow('circular')
+    await expect(service.editRelationship(edge.id, { ...edge, sourceTopicId: 'kafka', targetTopicId: 'cdc', type: 'related' })).rejects.toThrow('already exists')
+    await expect(service.editRelationship(edge.id, { ...edge, targetTopicId: 'quality' })).rejects.toThrow('Both topics')
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(before)
+    storage.setItem.mockImplementationOnce(() => { throw new Error('Quota exceeded') })
+    await expect(service.editRelationship(edge.id, { ...edge, description: 'Failed edit' })).rejects.toThrow('could not save')
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(before)
+  })
+
   it('rejects duplicate directed dependencies and reverse duplicates of related edges', async () => {
     await add('cdc', 'kafka')
     await expect(add('cdc', 'kafka')).rejects.toThrow('already exists')
