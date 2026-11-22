@@ -10,7 +10,7 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 const createdAt = '2025-03-01T12:00:00.000Z'
 const topic: Topic = {
   id: 'cdc', title: 'CDC', description: 'Record changes', content: '## Offsets',
-  scope: 'Organization', createdAt, updatedAt: createdAt,
+  createdAt, updatedAt: createdAt,
 }
 const sample: TopicMetadata = {
   category: ' Data patterns ', technicalDomain: ' Data engineering ', tags: [' cdc ', 'cdc', 'streaming'],

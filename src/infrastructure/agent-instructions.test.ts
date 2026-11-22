@@ -10,7 +10,7 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 
 const date = '2026-11-19T12:00:00.000Z'
 const topic: Topic = {
-  id: 'cdc', title: 'Change Data Capture (CDC)', scope: 'Organization',
+  id: 'cdc', title: 'Change Data Capture (CDC)',
   description: 'Replicate database changes.', content: '### Standards\n\nRetain source offsets.',
   createdAt: date, updatedAt: date,
 }
@@ -240,7 +240,7 @@ describe('agent instructions', () => {
     await instructions.saveSettings(key, { usage: 'topic' })
     const topicOnly = parseDocument((await instructions.generate(key, { ...defaultInstructionOptions, content: false, dependencies: false })).yaml!).toJS()
     expect(topicOnly).toEqual({
-      topic: { id: topic.id, title: topic.title, description: topic.description, scope: topic.scope },
+      topic: { id: topic.id, title: topic.title, description: topic.description },
       objective: topic.description, usageContext: 'topic',
     })
     await instructions.saveSettings(key, { usage: 'project' })
@@ -369,7 +369,7 @@ describe('agent instructions', () => {
     expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
     await instructions.generate(key, defaultInstructionOptions)
     const saved = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
-    expect(saved).toMatchObject({ ...existing, version: 3 })
+    expect(saved).toMatchObject({ ...existing, version: 5 })
     expect(saved.instructionDrafts).toHaveLength(1)
   })
 })

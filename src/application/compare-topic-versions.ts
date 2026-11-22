@@ -53,15 +53,11 @@ export function compareTopicVersions(before: TopicSnapshot, after: TopicSnapshot
     { label: 'Description', before: before.description, after: after.description },
   ].filter(field => field.before !== field.after)
   const metadata = [
-    { label: 'Scope', before: before.metadata.scope, after: after.metadata.scope },
-    ...(before.metadata.parent?.id !== after.metadata.parent?.id ? [
-      { label: 'Parent topic', before: before.metadata.parent?.title, after: after.metadata.parent?.title },
-    ] : []),
     ...(before.metadata.source?.id !== after.metadata.source?.id ? [
       { label: 'Source topic', before: before.metadata.source?.title, after: after.metadata.source?.title },
     ] : []),
     ...metadataChanges(before.metadata.details, after.metadata.details),
-  ].filter(field => field.label !== 'Scope' || field.before !== field.after)
+  ]
   return {
     fields, metadata, content: compareContent(before.content, after.content),
     dependencies: compareLinks(before.dependencies, after.dependencies),

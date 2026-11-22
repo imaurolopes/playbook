@@ -1,22 +1,10 @@
 ﻿import { useId, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, FileText, GitFork, Layers3, Link2, Maximize2, Minimize2, Plus, Search, Trash2 } from 'lucide-react'
+import { FileText, GitFork, Maximize2, Minimize2, Plus, Search, Trash2 } from 'lucide-react'
 import type { Topic } from '../domain/topic'
-import { otherTopicId, relationshipsFor, type RelationshipInput, type RelationshipType, type TopicRelationship } from '../domain/topic-relationship'
+import { type RelationshipInput, type RelationshipType, type TopicRelationship } from '../domain/topic-relationship'
 import { topicPath } from './navigation'
-
-const groupDetails = [
-  { key: 'dependencies', label: 'Depends on', icon: Link2 },
-  { key: 'related', label: 'Related to', icon: Layers3 },
-  { key: 'dependents', label: 'Required by', icon: ArrowLeft },
-] as const
-
-type GroupKey = (typeof groupDetails)[number]['key']
-interface RelationshipRow {
-  relationship: TopicRelationship
-  topic: Topic
-}
-type RelationshipGroups = Record<GroupKey, RelationshipRow[]>
+import { groupDetails, topicRelationshipGroups, type RelationshipGroups, type RelationshipRow } from './topic-relationship-groups'
 
 function DependencyGraph({ topic, groups }: { topic: Topic; groups: RelationshipGroups }) {
   const [expanded, setExpanded] = useState(false)
@@ -161,15 +149,7 @@ export function Dependencies({ topic, topics, relationships, onAdd, onRemove }: 
   const [removing, setRemoving] = useState<string>()
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
-  const byId = new Map(topics.map(item => [item.id, item]))
-  const connections = relationshipsFor(topic.id, relationships)
-  function rows(edges: readonly TopicRelationship[]): RelationshipRow[] {
-    return edges.flatMap(relationship => {
-      const other = byId.get(otherTopicId(topic.id, relationship))
-      return other ? [{ relationship, topic: other }] : []
-    })
-  }
-  const groups = { dependencies: rows(connections.dependencies), related: rows(connections.related), dependents: rows(connections.dependents) }
+  const groups = topicRelationshipGroups(topic.id, topics, relationships)
   const hasRows = groupDetails.some(({ key }) => groups[key].length)
 
   async function remove(id: string) {

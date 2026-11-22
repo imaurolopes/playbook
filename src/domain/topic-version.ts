@@ -1,4 +1,4 @@
-import type { Topic, TopicScope } from './topic'
+import type { Topic } from './topic'
 import { defaultTopicMetadata, metadataChanges, type TopicMetadata } from './topic-metadata'
 import { otherTopicId, relationshipsFor, type TopicRelationship } from './topic-relationship'
 
@@ -16,8 +16,6 @@ export interface TopicSnapshot {
   readonly description: string
   readonly content: string
   readonly metadata: {
-    readonly scope: TopicScope
-    readonly parent?: VersionTopicReference
     readonly source?: VersionTopicReference
     readonly details?: TopicMetadata
   }
@@ -46,8 +44,6 @@ export function captureTopicSnapshot(topic: Topic, topics: readonly Topic[], rel
   return {
     title: topic.title, description: topic.description, content: topic.content,
     metadata: {
-      scope: topic.scope,
-      parent: topic.parentId === undefined ? undefined : reference(topic.parentId),
       source: topic.sourceTopicId === undefined ? undefined : reference(topic.sourceTopicId),
       details: structuredClone(topic.metadata ?? defaultTopicMetadata),
     },
@@ -66,7 +62,6 @@ export function matchesTopicSnapshot(before: TopicSnapshot, after: TopicSnapshot
     return a.length === b.length && a.every(link => sameVersionRelationship(link, byId.get(link.id)))
   }
   return before.title === after.title && before.description === after.description && before.content === after.content &&
-    before.metadata.scope === after.metadata.scope && before.metadata.parent?.id === after.metadata.parent?.id &&
     before.metadata.source?.id === after.metadata.source?.id &&
     metadataChanges(before.metadata.details, after.metadata.details).length === 0 &&
     sameLinks(before.dependencies, after.dependencies) && sameLinks(before.related, after.related)

@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ImplementationService } from '../application/implementation-service'
 import { TopicService } from '../application/topic-service'
 import { implementationStatuses, orderedTasks, taskProgress, taskStatuses } from '../domain/implementation'
@@ -8,9 +8,9 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 const timestamp = '2026-11-19T12:00:00.000Z'
 const topic: Topic = {
   id: 'legacy', title: 'User topic', description: 'My description', content: '## My Markdown',
-  scope: 'Organization', createdAt: timestamp, updatedAt: timestamp,
+  createdAt: timestamp, updatedAt: timestamp,
 }
-const child: Topic = { ...topic, id: 'child', parentId: topic.id, title: 'Child topic' }
+const child: Topic = { ...topic, id: 'child', title: 'Child topic' }
 const azure = 'azure-data-platform'
 const aws = 'aws-data-platform'
 const draft = { title: ' Ingest events ', description: ' Set up ingestion ', status: 'todo' } as const
@@ -220,7 +220,6 @@ describe('project implementations', () => {
     expect(state.implementations).toEqual([childPlan])
     expect(state.tasks.map(task => task.id)).toEqual([kept])
     expect((await repository.readWorkspace()).relationships).toEqual([])
-    expect((await repository.list())[0]?.parentId).toBeUndefined()
   })
 
   it('does not partially delete a project if saving fails', async () => {
@@ -241,11 +240,11 @@ describe('project implementations', () => {
     const raw = JSON.stringify(version === 1 ? topics : { version: 2, topics, relationships })
     entries.set(TOPIC_STORAGE_KEY, raw)
     expect((await service.list()).projects.map(item => item.name)).toEqual(['Azure Data Platform', 'AWS Data Platform'])
-    expect(await repository.readWorkspace()).toEqual({ topics, relationships })
+    expect(await repository.readWorkspace()).toMatchObject({ topics, relationships })
     expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
     await create()
-    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 3, topics, relationships })
-    expect(await new LocalStorageTopicRepository(() => storage).readWorkspace()).toEqual({ topics, relationships })
+    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 5, topics, relationships })
+    expect(await new LocalStorageTopicRepository(() => storage).readWorkspace()).toMatchObject({ topics, relationships })
   })
 
   it('preserves an explicitly empty project list across reloads', async () => {

@@ -1,4 +1,4 @@
-﻿import type { Topic, TopicInput } from '../domain/topic'
+import type { Topic, TopicInput } from '../domain/topic'
 import type { RelationshipInput } from '../domain/topic-relationship'
 import type { TopicRepository } from './topic-repository'
 import { cleanTopicMetadata, type TopicMetadata } from '../domain/topic-metadata'
@@ -31,6 +31,18 @@ export class TopicService {
 
   delete(id: string) {
     return this.repository.delete(id)
+  }
+
+  restoreTopic(id: string) {
+    return this.repository.restoreTopic(id)
+  }
+
+  deletePermanently(id: string) {
+    return this.repository.deletePermanently(id)
+  }
+
+  emptyTrash() {
+    return this.repository.emptyTrash()
   }
 
   async saveMetadata(topicId: string, metadata: TopicMetadata) {

@@ -1,4 +1,3 @@
-import { scopes } from '../domain/topic'
 import { isTopicMetadata } from '../domain/topic-metadata'
 import type { TopicSnapshot, TopicVersion, VersionRelationship, VersionTopicReference } from '../domain/topic-version'
 
@@ -23,8 +22,6 @@ function isSnapshot(value: unknown): value is TopicSnapshot {
   const { metadata } = value
   return typeof value.title === 'string' && Boolean(value.title.trim()) &&
     typeof value.description === 'string' && typeof value.content === 'string' &&
-    scopes.some(scope => scope === metadata.scope) &&
-    (metadata.parent === undefined || isReference(metadata.parent)) &&
     (metadata.source === undefined || isReference(metadata.source)) &&
     (metadata.details === undefined || isTopicMetadata(metadata.details)) &&
     linkList(value.dependencies) && linkList(value.related)

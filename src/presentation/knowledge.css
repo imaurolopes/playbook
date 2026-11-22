@@ -1,0 +1,29 @@
+﻿.knowledge-content,
+.knowledge-section,
+.knowledge-content fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.knowledge-content fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.knowledge-content label {
+  display: grid;
+  gap: 4px;
+}
+
+.knowledge-section {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.knowledge-section > .button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}

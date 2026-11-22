@@ -40,8 +40,6 @@ function SnapshotDetails({ version, id }: { version: TopicVersion; id: string })
     <h4>{title}</h4>
     {description && <p>{description}</p>}
     <dl className="version-metadata">
-      <div><dt>Scope</dt><dd>{metadata.scope}</dd></div>
-      {metadata.parent && <div><dt>Parent</dt><dd>{metadata.parent.title}</dd></div>}
       {metadata.source && <div><dt>Source</dt><dd>{metadata.source.title}</dd></div>}
     </dl>
     <div className="version-snapshot-links">
@@ -106,7 +104,7 @@ function exportSnapshot(version: TopicVersion) {
     `# ${title} — ${versionLabel(version)}`,
     `Change summary: ${version.summary}\n\nAuthor: ${version.author}\n\nCreated: ${version.createdAt}`,
     description,
-    ['## Metadata', `- Scope: ${metadata.scope}`, metadata.parent && `- Parent: ${metadata.parent.title}`,
+    ['## Metadata',
       metadata.source && `- Source: ${metadata.source.title}`].filter(Boolean).join('\n'),
     ...relations('## Direct dependencies', dependencies),
     ...relations('## Related topics', related),

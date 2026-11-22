@@ -153,7 +153,7 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
           {dialogError && <p className="error" role="alert">{dialogError}</p>}
           <div className="editor-actions">
             <button type="button" className="button" onClick={() => dialog.current?.close()}>Cancel</button>
-            <button type="submit" className={mode === 'delete' ? 'button danger' : 'button primary'}>{mode === 'delete' ? 'Delete template' : 'Save template'}</button>
+            <button type="submit" className={mode === 'delete' ? 'button danger' : 'button primary'}>{mode === 'delete' ? 'Delete template' : 'Save'}</button>
           </div>
         </fieldset>
       </form>

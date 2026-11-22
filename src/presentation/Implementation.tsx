@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type Modifier } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -185,7 +185,7 @@ function ReferenceDialog({ topics, reference, onClose, onSave }: {
   onSave: (input: ReferenceDetails) => Promise<void>
 }) {
   const [kind, setKind] = useState<ReferenceDetails['kind']>(reference?.kind ?? 'topic')
-  return <ImplementationDialog title={reference ? 'Edit reference' : 'Add reference'} submitLabel="Save reference" onClose={onClose} onSubmit={async fields => {
+  return <ImplementationDialog title={reference ? 'Edit reference' : 'Add reference'} submitLabel="Save" onClose={onClose} onSubmit={async fields => {
     if (kind === 'topic') await onSave({ kind, topicId: fieldValue(fields, 'topic') })
     else await onSave({ kind, title: fieldValue(fields, 'title'), url: fieldValue(fields, 'url') })
   }}>
@@ -220,7 +220,7 @@ function ArtifactDialog({ artifact, onClose, onSave }: {
   onClose: () => void
   onSave: (input: ArtifactDetails) => Promise<void>
 }) {
-  return <ImplementationDialog title={artifact ? 'Edit artifact' : 'Add artifact'} submitLabel="Save artifact" onClose={onClose} onSubmit={async fields => {
+  return <ImplementationDialog title={artifact ? 'Edit artifact' : 'Add artifact'} submitLabel="Save" onClose={onClose} onSubmit={async fields => {
     const type = artifactTypes.find(value => value === fieldValue(fields, 'type'))
     if (!type) throw new Error('Choose an artifact type.')
     await onSave({ title: fieldValue(fields, 'title'), type, url: fieldValue(fields, 'url'), description: fieldValue(fields, 'description') })
@@ -265,7 +265,7 @@ function DetailAction({ label, icon: Icon, onClick, disabled }: {
 function ProjectDialog({ project, onClose, onSave }: { project?: Project; onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
   const [name, setName] = useState(project?.name ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
-  return <ImplementationDialog title={project ? 'Edit project' : 'New project'} submitLabel={project ? 'Save project' : 'Create project'}
+  return <ImplementationDialog title={project ? 'Edit project' : 'New project'} submitLabel={project ? 'Save' : 'Create project'}
     onClose={onClose} onSubmit={() => onSave(name, description)}>
     <div className="implementation-form-field">
       <label htmlFor="implementation-project-name">Project name</label>
@@ -282,7 +282,7 @@ function TaskDialog({ task, onClose, onSave }: { task?: ImplementationTask; onCl
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'todo')
-  return <ImplementationDialog title={task ? 'Edit task' : 'New task'} submitLabel={task ? 'Save task' : 'Add task'} onClose={onClose}
+  return <ImplementationDialog title={task ? 'Edit task' : 'New task'} submitLabel={task ? 'Save' : 'Add task'} onClose={onClose}
     onSubmit={() => onSave({ title, description, status })}>
     <div className="implementation-form-field">
       <label htmlFor="implementation-task-title">Task title</label>
@@ -321,7 +321,7 @@ function DecisionNotes({ implementation, busy, onSave }: {
     </div>
     {editing ? <>
       <div className="segmented notes-mode" aria-label="Decision notes editor mode">
-        <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Write</button>
+        <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Edit</button>
         <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>Preview</button>
       </div>
       {preview ? <div className="editor-preview">{draft.trim() ? <Markdown content={draft} /> : <p className="muted">No notes to preview.</p>}</div>
@@ -329,7 +329,7 @@ function DecisionNotes({ implementation, busy, onSave }: {
           onChange={event => setDraft(event.target.value)} placeholder="Document technical decisions in Markdown…" />}
       <div className="editor-actions">
         <button className="button" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
-        <button className="button primary" disabled={busy} onClick={async () => { if (await onSave(draft)) setEditing(false) }}>Save notes</button>
+        <button className="button primary" disabled={busy} onClick={async () => { if (await onSave(draft)) setEditing(false) }}>Save</button>
       </div>
     </> : implementation.notes.trim() ? <Markdown content={implementation.notes} /> : <p className="muted">No technical decisions have been recorded.</p>}
   </section>
@@ -527,7 +527,7 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
               <div className="field branch-field"><GitBranch size={16} aria-hidden="true" />
                 <input id="implementation-branch" name="branch" disabled={busy} defaultValue={implementation.branch} placeholder="Branch name" />
               </div>
-              <button type="submit" className="button icon-button detail-action" disabled={busy} title="Save branch" aria-label="Save branch"><Check size={15} /></button>
+              <button type="submit" className="button icon-button detail-action" disabled={busy} title="Save" aria-label="Save"><Check size={15} /></button>
             </form>
           </div>
         </section>
@@ -648,7 +648,7 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
         setCollapsed(false)
       }
     }, dialog.task ? 'Task saved.' : 'Task added.')} />}
-    {dialog?.kind === 'criterion' && <ImplementationDialog title={dialog.criterion ? 'Edit criterion' : 'Add criterion'} submitLabel="Save criterion"
+    {dialog?.kind === 'criterion' && <ImplementationDialog title={dialog.criterion ? 'Edit criterion' : 'Add criterion'} submitLabel="Save"
       onClose={() => setDialog(undefined)} onSubmit={fields => commit(() => {
         const description = fieldValue(fields, 'description')
         return dialog.criterion

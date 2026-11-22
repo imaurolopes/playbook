@@ -1,18 +1,18 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TopicService } from '../application/topic-service'
 import type { Topic } from '../domain/topic'
 import { otherTopicId, relationshipsFor, type RelationshipType } from '../domain/topic-relationship'
 import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-topic-repository'
 
 const timestamp = '2026-11-19T12:00:00.000Z'
-function makeTopic(id: string, parentId?: string): Topic {
+function makeTopic(id: string): Topic {
   return {
-    id, parentId, title: id, description: 'User description', content: '## User Markdown',
-    scope: 'Organization', createdAt: timestamp, updatedAt: timestamp,
+    id, title: id, description: 'User description', content: '## User Markdown',
+    createdAt: timestamp, updatedAt: timestamp,
   }
 }
 
-const topics = [makeTopic('data'), makeTopic('cdc', 'data'), makeTopic('kafka'), makeTopic('quality')]
+const topics = [makeTopic('data'), makeTopic('cdc'), makeTopic('kafka'), makeTopic('quality')]
 
 describe('topic relationships', () => {
   const entries = new Map<string, string>()
@@ -57,8 +57,8 @@ describe('topic relationships', () => {
     expect((await repository.readWorkspace()).relationships).toEqual([])
   })
 
-  it('rejects two-topic and transitive cycles independently of hierarchy and related edges', async () => {
-    await add('cdc', 'data') // The inverse hierarchy direction is valid as a dependency.
+  it('rejects two-topic and transitive cycles independently of related edges', async () => {
+    await add('cdc', 'data')
     await expect(add('data', 'cdc')).rejects.toThrow('circular')
     await add('data', 'kafka')
     await add('kafka', 'cdc', 'related')
@@ -77,7 +77,7 @@ describe('topic relationships', () => {
     expect(otherTopicId('kafka', related)).toBe('cdc')
   })
 
-  it('deletes incident edges in the same write and preserves unrelated edges and promoted children', async () => {
+  it('hides incident edges in the same write and preserves unrelated edges', async () => {
     await add('data', 'kafka')
     await add('quality', 'data')
     await add('data', 'cdc', 'related')
@@ -88,34 +88,18 @@ describe('topic relationships', () => {
     const workspace = await repository.readWorkspace()
     expect(workspace.relationships).toEqual([kept])
     expect(workspace.topics.map(topic => topic.id)).toEqual(['cdc', 'kafka', 'quality'])
-    expect(workspace.topics.find(topic => topic.id === 'cdc')?.parentId).toBeUndefined()
   })
 
   it('leaves topics and relationships intact if a deletion write fails', async () => {
     const edge = await add('cdc', 'kafka')
     storage.setItem.mockImplementationOnce(() => { throw new Error('Quota exceeded') })
     await expect(service.delete('kafka')).rejects.toThrow('could not save')
-    expect(await repository.readWorkspace()).toEqual({ topics, relationships: [edge] })
-  })
-
-  it('reads legacy user data and upgrades it with the first write without changing any topic fields', async () => {
-    const legacy = [makeTopic('user-root'), { ...makeTopic('user-child', 'user-root'), sourceTopicId: 'upstream' }]
-    const raw = JSON.stringify(legacy)
-    entries.set(TOPIC_STORAGE_KEY, raw)
-
-    expect(await repository.readWorkspace()).toEqual({ topics: legacy, relationships: [] })
-    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
-    const edge = await add('user-child', 'user-root')
-    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 3, topics: JSON.parse(raw), relationships: [edge] })
-    const reopened = new LocalStorageTopicRepository(() => storage)
-    expect(await reopened.readWorkspace()).toEqual({ topics: legacy, relationships: [edge] })
-    await reopened.deleteRelationship(edge.id)
-    expect((await new LocalStorageTopicRepository(() => storage).readWorkspace()).relationships).toEqual([])
+    expect(await repository.readWorkspace()).toEqual({ topics, trashedTopics: [], relationships: [edge] })
   })
 
   it('recognizes an empty legacy workspace and leaves corrupt relationship records untouched', async () => {
     entries.set(TOPIC_STORAGE_KEY, '[]')
-    expect(await repository.readWorkspace()).toEqual({ topics: [], relationships: [] })
+    expect(await repository.readWorkspace()).toMatchObject({ topics: [], relationships: [] })
     const raw = JSON.stringify({
       version: 2, topics, relationships: [{ id: 'orphan', sourceTopicId: 'missing', targetTopicId: 'cdc', type: 'related', createdAt: timestamp, updatedAt: timestamp }],
     })

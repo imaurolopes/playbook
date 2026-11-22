@@ -1,4 +1,5 @@
-﻿import type { ImplementationChanges, ImplementationRepository, ImplementationWorkspace, TaskChanges } from '../application/implementation-repository'
+import { backUpTopicOrganization, flattenTopics, organizationIssues } from './topic-organization-migration'
+import type { ImplementationChanges, ImplementationRepository, ImplementationWorkspace, TaskChanges } from '../application/implementation-repository'
 import type { ProjectChanges, TaskDetailChange } from '../application/implementation-repository'
 import type { InstructionRepository } from '../application/instruction-repository'
 import { instructionKey, usageContexts, type InstructionDraft, type InstructionKey, type InstructionSettings } from '../domain/agent-instructions'
@@ -6,38 +7,73 @@ import { defaultGenerationTemplate, validTemplateSections, type GenerationTempla
 import { orderedTasks, validateTaskDependency, type ArtifactDetails, type ImplementationArtifact, type ImplementationTask, type Project, type TopicImplementation } from '../domain/implementation'
 import { initialImplementations, readStoredImplementations } from './stored-implementations'
 import type { TopicRepository, TopicRestoreResult, TopicWorkspace } from '../application/topic-repository'
-import { scopes, validateParent, type Topic, type TopicInput } from '../domain/topic'
+import { isTrashed, type Topic, type TopicInput } from '../domain/topic'
 import { otherTopicId, relationshipTypes, relationshipsFor, validateRelationship, type RelationshipType, type TopicRelationship } from '../domain/topic-relationship'
 import { captureTopicSnapshot, type TopicSnapshot, type TopicVersion, type VersionRelationship } from '../domain/topic-version'
 import { readTopicVersions } from './stored-topic-versions'
 import { isTopicMetadata, type TopicMetadata } from '../domain/topic-metadata'
+import type { KnowledgeRepository } from '../application/knowledge-repository'
+import type { KnowledgeSection } from '../domain/knowledge'
+import { legacyKnowledgeNotice, migrateLegacyKnowledge, readKnowledgeSections } from './stored-knowledge'
 
 export const TOPIC_STORAGE_KEY = 'playbook.topics.v1'
 type TopicStorage = Pick<Storage, 'getItem' | 'setItem'>
 type StoredInstructionSettings = InstructionKey & InstructionSettings
-type StoredWorkspace = TopicWorkspace & {
+type StoredWorkspace = Omit<TopicWorkspace, 'trashedTopics'> & {
   implementationData: ImplementationWorkspace
   instructionDrafts: InstructionDraft[]
   instructionSettings: StoredInstructionSettings[]
   instructionTemplates: GenerationTemplate[]
   topicVersions: TopicVersion[]
+  knowledgeSections: KnowledgeSection[]
+  legacyKnowledgeData?: unknown
+}
+
+function activeTopicIds(topics: readonly Topic[]) {
+  return new Set(topics.filter(topic => !isTrashed(topic)).map(topic => topic.id))
+}
+
+function visibleRelationships(relationships: TopicRelationship[], activeIds: ReadonlySet<string>) {
+  return relationships.filter(edge => activeIds.has(edge.sourceTopicId) && activeIds.has(edge.targetTopicId))
+}
+
+function workspaceView({ topics, relationships, navigationNotice }: StoredWorkspace): TopicWorkspace {
+  return {
+    topics: topics.filter(topic => !isTrashed(topic)),
+    trashedTopics: topics.filter(isTrashed).sort((a, b) => Date.parse(b.deletedAt) - Date.parse(a.deletedAt)),
+    relationships: visibleRelationships(relationships, activeTopicIds(topics)),
+    ...(navigationNotice && { navigationNotice }),
+  }
+}
+
+function requireActiveTopic(workspace: StoredWorkspace, id: string) {
+  const topic = workspace.topics.find(item => item.id === id)
+  if (!topic || isTrashed(topic)) throw new Error('This topic no longer exists or is in Trash.')
+  return topic
+}
+
+function requireActiveImplementation(workspace: StoredWorkspace, id: string) {
+  const implementation = workspace.implementationData.implementations.find(item => item.id === id)
+  if (!implementation) throw new Error('This implementation no longer exists.')
+  requireActiveTopic(workspace, implementation.topicId)
+  return implementation
 }
 
 function appendVersion(workspace: StoredWorkspace, topic: Topic, summary: string, author: string, createdAt: string, restoredFromVersionId?: string) {
   const latest = workspace.topicVersions.reduce((number, item) => item.topicId === topic.id ? Math.max(number, item.versionNumber) : number, 0)
   const version: TopicVersion = {
     id: crypto.randomUUID(), topicId: topic.id, versionNumber: latest + 1, summary, author, createdAt, restoredFromVersionId,
-    snapshot: captureTopicSnapshot(topic, workspace.topics, workspace.relationships),
+    snapshot: captureTopicSnapshot(topic, workspace.topics, visibleRelationships(workspace.relationships, activeTopicIds(workspace.topics))),
   }
   workspace.topicVersions.push(version)
   return version
 }
 
-function restoredRelationships(workspace: TopicWorkspace, topicId: string, snapshot: TopicSnapshot, now: string) {
-  const { dependencies, related } = relationshipsFor(topicId, workspace.relationships)
+function restoredRelationships(workspace: StoredWorkspace, topicId: string, snapshot: TopicSnapshot, now: string) {
+  const topicIds = activeTopicIds(workspace.topics)
+  const { dependencies, related } = relationshipsFor(topicId, visibleRelationships(workspace.relationships, topicIds))
   const replaced = new Set([...dependencies, ...related].map(edge => edge.id))
   const relations = workspace.relationships.filter(edge => !replaced.has(edge.id))
-  const topicIds = new Set(workspace.topics.map(topic => topic.id))
 
   function restore(links: readonly VersionRelationship[], current: TopicRelationship[], type: RelationshipType) {
     const existing = new Map(current.map(edge => [otherTopicId(topicId, edge), edge]))
@@ -111,21 +147,20 @@ function isCustomTemplate(value: unknown): value is GenerationTemplate {
 }
 
 function validateInstructionContext(workspace: StoredWorkspace, key: InstructionKey) {
-  if (!workspace.topics.some(topic => topic.id === key.topicId)) throw new Error('This topic no longer exists.')
+  requireActiveTopic(workspace, key.topicId)
   if (key.projectId !== undefined && !workspace.implementationData.projects.some(project => project.id === key.projectId)) {
     throw new Error('This project no longer exists.')
   }
 }
 
-function isTopic(value: unknown): value is Topic {
+function isTopicContent(value: unknown): value is Topic {
   if (!value || typeof value !== 'object') return false
   const topic = value as Record<string, unknown>
   return typeof topic.id === 'string' && Boolean(topic.id) &&
     typeof topic.title === 'string' && Boolean(topic.title.trim()) &&
     typeof topic.description === 'string' && typeof topic.content === 'string' &&
-    scopes.some(scope => scope === topic.scope) &&
     isTimestamp(topic.createdAt) && isTimestamp(topic.updatedAt) &&
-    (topic.parentId === undefined || typeof topic.parentId === 'string') &&
+    (topic.deletedAt === undefined || isTimestamp(topic.deletedAt)) &&
     (topic.sourceTopicId === undefined || typeof topic.sourceTopicId === 'string') &&
     (topic.metadata === undefined || isTopicMetadata(topic.metadata))
 }
@@ -140,7 +175,7 @@ function isRelationship(value: unknown): value is TopicRelationship {
     isTimestamp(edge.createdAt) && isTimestamp(edge.updatedAt)
 }
 
-export class LocalStorageTopicRepository implements TopicRepository, ImplementationRepository, InstructionRepository {
+export class LocalStorageTopicRepository implements TopicRepository, ImplementationRepository, InstructionRepository, KnowledgeRepository {
   constructor(
     private readonly storage: () => TopicStorage,
     private readonly seed: readonly Topic[] = [],
@@ -158,25 +193,34 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
       const workspace = {
         topics: this.seed.map(topic => ({ ...topic })), relationships: [],
         implementationData: initialImplementations(), instructionDrafts: [], instructionSettings: [], instructionTemplates: [], topicVersions: [],
+        knowledgeSections: [],
       }
       this.write(workspace)
       return workspace
     }
 
+    let workspace: StoredWorkspace
+    let issues: string[] | undefined
+    let invalidReason = 'Stored Playbook workspace data is invalid.'
     try {
       const stored: unknown = JSON.parse(raw)
       // A legacy array is upgraded in memory and written in the new format on the next change.
       const data = Array.isArray(stored)
         ? { version: 2, topics: stored, relationships: [] }
         : stored as Record<string, unknown> | null
-      if (data?.version !== 2 && data?.version !== 3) throw new Error()
-      const { topics, relationships, instructionDrafts = [], instructionSettings = [], instructionTemplates = [], topicVersions = [] } = data
-      if (!Array.isArray(topics) || !topics.every(isTopic) ||
+      if (data?.version !== 2 && data?.version !== 3 && data?.version !== 4 && data?.version !== 5) throw new Error()
+      const { topics: storedTopics, relationships, instructionDrafts = [], instructionSettings = [], instructionTemplates = [],
+        topicVersions = [], knowledgeData, knowledgeSections, legacyKnowledgeData } = data
+      if (!Array.isArray(storedTopics) || !storedTopics.every(isTopicContent) ||
           !Array.isArray(relationships) || !relationships.every(isRelationship)) throw new Error()
 
-      const topicIds = new Set(topics.map(topic => topic.id))
-      if (topicIds.size !== topics.length) throw new Error()
-      for (const topic of topics) validateParent(topics, topic.id, topic.parentId)
+      const topicIds = new Set(storedTopics.map(topic => topic.id))
+      if (topicIds.size !== storedTopics.length) {
+        invalidReason = 'Stored Playbook workspace has duplicate topic IDs, so topic references are ambiguous.'
+        throw new Error()
+      }
+      const migrating = data.version !== 5
+      if (migrating) issues = organizationIssues(storedTopics, data.folders, data.version === 4)
 
       const edgeIds = new Set<string>()
       const validated: TopicRelationship[] = []
@@ -186,7 +230,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
         edgeIds.add(relationship.id)
         validated.push(relationship)
       }
-      const implementationData = data.version === 3
+      const implementationData = data.version !== 2
         ? readStoredImplementations(data.implementationData, topicIds)
         : initialImplementations()
       if (!Array.isArray(instructionDrafts) || !instructionDrafts.every(isInstructionDraft)) throw new Error()
@@ -197,35 +241,83 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
         items.some(item => !topicIds.has(item.topicId) || (item.projectId !== undefined && !projectIds.has(item.projectId)))
       if (invalidKeys(instructionDrafts) || invalidKeys(instructionSettings) ||
         new Set(instructionTemplates.map(template => template.id)).size !== instructionTemplates.length) throw new Error()
-      return { topics, relationships, implementationData, instructionDrafts, instructionSettings, instructionTemplates,
-        topicVersions: readTopicVersions(topicVersions, topicIds) }
+      const versions = readTopicVersions(topicVersions, topicIds).map(version => {
+        if (!migrating) return version
+        const metadata = { ...version.snapshot.metadata } as TopicSnapshot['metadata'] & { scope?: unknown; parent?: unknown }
+        delete metadata.scope
+        delete metadata.parent
+        return { ...version, snapshot: { ...version.snapshot, metadata } }
+      })
+      const knowledge = knowledgeSections === undefined
+        ? migrateLegacyKnowledge(knowledgeData, topicIds)
+        : { knowledgeSections: readKnowledgeSections(knowledgeSections, topicIds), legacyKnowledgeData }
+      workspace = {
+        topics: storedTopics, relationships,
+        implementationData, instructionDrafts, instructionSettings, instructionTemplates, topicVersions: versions, ...knowledge,
+        navigationNotice: typeof data.navigationNotice === 'string' ? data.navigationNotice : undefined,
+      }
     } catch {
-      throw new Error('Stored Playbook workspace data is invalid. The original data has been preserved.')
+      throw new Error(`${invalidReason} The original data has been preserved.`)
     }
+
+    if (issues) {
+      let key: string
+      try {
+        key = backUpTopicOrganization(this.storage(), raw)
+      } catch {
+        throw new Error('Playbook could not back up the original topic organization. The workspace is unchanged. Check available browser storage and try again.')
+      }
+      workspace.topics = flattenTopics(workspace.topics)
+      const details = issues.length ? ` Review the original records for ${issues.join(', ')}.` : ''
+      workspace.navigationNotice = `Topics now appear in a flat list. The original workspace is backed up in browser storage under ${key}.${details}`
+    }
+    return workspace
   }
 
   private write(workspace: StoredWorkspace): void {
     try {
-      this.storage().setItem(TOPIC_STORAGE_KEY, JSON.stringify({ version: 3, ...workspace }))
+      this.storage().setItem(TOPIC_STORAGE_KEY, JSON.stringify({ version: 5, ...workspace }))
     } catch {
       throw new Error('Playbook could not save to browser storage. Check available space and browser settings.')
     }
   }
 
   async readWorkspace(): Promise<TopicWorkspace> {
-    const { topics, relationships } = this.read()
-    return { topics, relationships }
+    return workspaceView(this.read())
+  }
+
+  async readKnowledge(topicId: string) {
+    const workspace = this.read()
+    requireActiveTopic(workspace, topicId)
+    return {
+      sections: workspace.knowledgeSections.filter(section => section.topicId === topicId)
+        .sort((a, b) => a.order - b.order),
+      migrationNotice: legacyKnowledgeNotice(workspace.legacyKnowledgeData),
+    }
+  }
+
+  async saveKnowledgeSection(topicId: string, sectionId: string, content: string) {
+    const workspace = this.read()
+    const index = workspace.knowledgeSections.findIndex(section => section.topicId === topicId && section.id === sectionId)
+    const section = workspace.knowledgeSections[index]
+    if (!section) throw new Error('This knowledge section no longer exists.')
+    requireActiveTopic(workspace, topicId)
+    const updated = { ...section, content }
+    workspace.knowledgeSections[index] = updated
+    this.write(workspace)
+    return updated
   }
 
   async listVersions(topicId: string) {
-    return this.read().topicVersions.filter(version => version.topicId === topicId)
+    const workspace = this.read()
+    if (!activeTopicIds(workspace.topics).has(topicId)) return []
+    return workspace.topicVersions.filter(version => version.topicId === topicId)
       .sort((a, b) => b.versionNumber - a.versionNumber)
   }
 
   async createVersion(topicId: string, summary: string, author: string) {
     const workspace = this.read()
-    const topic = workspace.topics.find(item => item.id === topicId)
-    if (!topic) throw new Error('This topic no longer exists.')
+    const topic = requireActiveTopic(workspace, topicId)
     const version = appendVersion(workspace, topic, summary, author, new Date().toISOString())
     this.write(workspace)
     return version
@@ -234,40 +326,44 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   async restoreVersion(topicId: string, versionId: string, author: string): Promise<TopicRestoreResult> {
     const workspace = this.read()
     const index = workspace.topics.findIndex(topic => topic.id === topicId)
-    const topic = workspace.topics[index]
-    if (!topic) throw new Error('This topic no longer exists.')
+    const topic = requireActiveTopic(workspace, topicId)
     const target = workspace.topicVersions.find(item => item.topicId === topicId && item.id === versionId)
     if (!target) throw new Error('This version no longer exists for this topic.')
     const { title, description, content, metadata } = target.snapshot
-    try {
-      validateParent(workspace.topics, topicId, metadata.parent?.id)
-    } catch (problem) {
-      const reason = problem instanceof Error ? problem.message : 'The parent topic is invalid.'
-      throw new Error(`Cannot restore parent “${metadata.parent?.title}”: ${reason}`)
-    }
-
     const now = new Date().toISOString()
     const relationships = restoredRelationships(workspace, topicId, target.snapshot, now)
     const backup = appendVersion(workspace, topic, `State before restoring v${target.versionNumber}.`, author, now)
     const restored: Topic = {
-      ...topic, title, description, content, scope: metadata.scope,
-      parentId: metadata.parent?.id, sourceTopicId: metadata.source?.id, updatedAt: now,
+      ...topic, title, description, content, sourceTopicId: metadata.source?.id, updatedAt: now,
       metadata: metadata.details ?? topic.metadata,
     }
     workspace.topics[index] = restored
     workspace.relationships = relationships
     const version = appendVersion(workspace, restored, `Restored from v${target.versionNumber}.`, author, now, target.id)
     this.write(workspace)
-    return { workspace: { topics: workspace.topics, relationships }, backup, version }
+    return { workspace: workspaceView(workspace), backup, version }
   }
 
   async readImplementations() {
-    return this.read().implementationData
+    const workspace = this.read()
+    const { projects, implementations, tasks, artifacts } = workspace.implementationData
+    const activeIds = activeTopicIds(workspace.topics)
+    const visible = implementations.filter(item => activeIds.has(item.topicId))
+    const implementationIds = new Set(visible.map(item => item.id))
+    return {
+      projects, implementations: visible,
+      tasks: tasks.filter(task => implementationIds.has(task.implementationId)).map(task => ({
+        ...task, references: task.references.filter(reference => reference.kind !== 'topic' || activeIds.has(reference.topicId)),
+      })),
+      artifacts: artifacts.filter(artifact => implementationIds.has(artifact.implementationId)),
+    }
   }
 
   async readInstructionDraft(key: InstructionKey) {
     const id = instructionKey(key)
-    return this.read().instructionDrafts.find(draft => instructionKey(draft) === id)
+    const workspace = this.read()
+    if (!activeTopicIds(workspace.topics).has(key.topicId)) return undefined
+    return workspace.instructionDrafts.find(draft => instructionKey(draft) === id)
   }
 
   async updateInstructionDraft(key: InstructionKey, update: (current?: InstructionDraft) => InstructionDraft) {
@@ -288,7 +384,9 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   async readInstructionSettings(key: InstructionKey): Promise<InstructionSettings> {
     const id = instructionKey(key)
-    const settings = this.read().instructionSettings.find(item => instructionKey(item) === id)
+    const workspace = this.read()
+    if (!activeTopicIds(workspace.topics).has(key.topicId)) return {}
+    const settings = workspace.instructionSettings.find(item => instructionKey(item) === id)
     return settings ? { objective: settings.objective, usage: settings.usage, templateId: settings.templateId } : {}
   }
 
@@ -337,17 +435,16 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   }
 
   async list() {
-    return this.read().topics
+    return this.read().topics.filter(topic => !isTrashed(topic))
   }
 
   async getById(id: string) {
-    return this.read().topics.find(topic => topic.id === id)
+    return this.read().topics.find(topic => topic.id === id && !isTrashed(topic))
   }
 
   async create(topic: Topic) {
     const workspace = this.read()
     if (workspace.topics.some(existing => existing.id === topic.id)) throw new Error('A topic with this ID already exists.')
-    validateParent(workspace.topics, topic.id, topic.parentId)
     workspace.topics.push(topic)
     this.write(workspace)
     return topic
@@ -355,12 +452,10 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   async update(input: TopicInput & Pick<Topic, 'id' | 'updatedAt'>) {
     const workspace = this.read()
-    const { id, title, description, content, scope, parentId, updatedAt } = input
+    const { id, title, description, content, updatedAt } = input
     const index = workspace.topics.findIndex(existing => existing.id === id)
-    const existing = workspace.topics[index]
-    if (!existing) throw new Error('This topic no longer exists.')
-    validateParent(workspace.topics, id, parentId)
-    const topic = { ...existing, title, description, content, scope, parentId, updatedAt }
+    const existing = requireActiveTopic(workspace, id)
+    const topic = { ...existing, title, description, content, updatedAt }
     workspace.topics[index] = topic
     this.write(workspace)
     return topic
@@ -369,8 +464,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   async updateMetadata(id: string, metadata: TopicMetadata) {
     const workspace = this.read()
     const index = workspace.topics.findIndex(topic => topic.id === id)
-    const topic = workspace.topics[index]
-    if (!topic) throw new Error('This topic no longer exists.')
+    const topic = requireActiveTopic(workspace, id)
     if (!isTopicMetadata(metadata)) throw new Error('Enter valid topic metadata.')
     const updated = { ...topic, metadata, updatedAt: new Date().toISOString() }
     workspace.topics[index] = updated
@@ -380,13 +474,40 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   async delete(id: string) {
     const workspace = this.read()
-    const { topics, relationships, implementationData, instructionDrafts, instructionSettings } = workspace
-    const topic = topics.find(existing => existing.id === id)
-    if (!topic) throw new Error('This topic no longer exists.')
+    const topic = workspace.topics.find(item => item.id === id)
+    if (!topic || isTrashed(topic)) return
+    topic.deletedAt = new Date().toISOString()
+    this.write(workspace)
+  }
+
+  async restoreTopic(id: string) {
+    const workspace = this.read()
+    const topic = workspace.topics.find(item => item.id === id)
+    if (topic?.deletedAt === undefined) return
+    delete topic.deletedAt
+    this.write(workspace)
+  }
+
+  async deletePermanently(id: string) {
+    const workspace = this.read()
+    const topic = workspace.topics.find(item => item.id === id)
+    if (!topic) return
+    if (!isTrashed(topic)) throw new Error('Move this topic to Trash before deleting it permanently.')
+    this.purgeTopics(workspace, new Set([id]))
+  }
+
+  async emptyTrash() {
+    const workspace = this.read()
+    this.purgeTopics(workspace, new Set(workspace.topics.filter(isTrashed).map(topic => topic.id)))
+  }
+
+  private purgeTopics(workspace: StoredWorkspace, ids: ReadonlySet<string>) {
+    if (!ids.size) return
+    const { implementationData } = workspace
+    removeImplementations(implementationData, item => ids.has(item.topicId))
     const updatedAt = new Date().toISOString()
-    removeImplementations(implementationData, item => item.topicId === id)
     for (const task of implementationData.tasks) {
-      const references = task.references.filter(reference => reference.kind !== 'topic' || reference.topicId !== id)
+      const references = task.references.filter(reference => reference.kind !== 'topic' || !ids.has(reference.topicId))
       if (references.length !== task.references.length) {
         task.references = references
         task.updatedAt = updatedAt
@@ -394,13 +515,12 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     }
     this.write({
       ...workspace,
-      topicVersions: workspace.topicVersions.filter(version => version.topicId !== id),
-      instructionDrafts: instructionDrafts.filter(draft => draft.topicId !== id),
-      instructionSettings: instructionSettings.filter(item => item.topicId !== id),
-      topics: topics.filter(existing => existing.id !== id).map(existing =>
-        existing.parentId === id ? { ...existing, parentId: topic.parentId, updatedAt } : existing,
-      ),
-      relationships: relationships.filter(edge => edge.sourceTopicId !== id && edge.targetTopicId !== id),
+      knowledgeSections: workspace.knowledgeSections.filter(section => !ids.has(section.topicId)),
+      topicVersions: workspace.topicVersions.filter(version => !ids.has(version.topicId)),
+      instructionDrafts: workspace.instructionDrafts.filter(draft => !ids.has(draft.topicId)),
+      instructionSettings: workspace.instructionSettings.filter(item => !ids.has(item.topicId)),
+      topics: workspace.topics.filter(topic => !ids.has(topic.id)),
+      relationships: workspace.relationships.filter(edge => !ids.has(edge.sourceTopicId) && !ids.has(edge.targetTopicId)),
     })
   }
 
@@ -409,7 +529,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     if (workspace.relationships.some(existing => existing.id === relationship.id)) {
       throw new Error('A relationship with this ID already exists.')
     }
-    validateRelationship(new Set(workspace.topics.map(topic => topic.id)), workspace.relationships, relationship)
+    validateRelationship(activeTopicIds(workspace.topics), workspace.relationships, relationship)
     workspace.relationships.push(relationship)
     this.write(workspace)
     return relationship
@@ -418,7 +538,10 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   async deleteRelationship(id: string) {
     const workspace = this.read()
     const index = workspace.relationships.findIndex(edge => edge.id === id)
-    if (index === -1) throw new Error('This relationship no longer exists.')
+    const edge = workspace.relationships[index]
+    if (!edge) throw new Error('This relationship no longer exists.')
+    requireActiveTopic(workspace, edge.sourceTopicId)
+    requireActiveTopic(workspace, edge.targetTopicId)
     workspace.relationships.splice(index, 1)
     this.write(workspace)
   }
@@ -449,6 +572,10 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     const workspace = this.read()
     const data = workspace.implementationData
     if (!data.projects.some(project => project.id === id)) throw new Error('This project no longer exists.')
+    const activeIds = activeTopicIds(workspace.topics)
+    const preservesTrash = [...data.implementations, ...workspace.instructionDrafts, ...workspace.instructionSettings]
+      .some(item => item.projectId === id && !activeIds.has(item.topicId))
+    if (preservesTrash) throw new Error('Restore or permanently delete the topics in Trash that use this project before deleting it.')
     data.projects = data.projects.filter(project => project.id !== id)
     removeImplementations(data, item => item.projectId === id)
     workspace.instructionDrafts = workspace.instructionDrafts.filter(draft => draft.projectId !== id)
@@ -465,7 +592,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   private addImplementation(workspace: StoredWorkspace, implementation: TopicImplementation) {
     const { projects, implementations } = workspace.implementationData
-    if (!workspace.topics.some(topic => topic.id === implementation.topicId)) throw new Error('This topic no longer exists.')
+    requireActiveTopic(workspace, implementation.topicId)
     if (!projects.some(project => project.id === implementation.projectId)) throw new Error('This project no longer exists.')
     if (implementations.some(item => item.topicId === implementation.topicId && item.projectId === implementation.projectId)) {
       return false
@@ -477,8 +604,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   async updateImplementation(id: string, changes: ImplementationChanges) {
     const workspace = this.read()
-    const item = workspace.implementationData.implementations.find(candidate => candidate.id === id)
-    if (!item) throw new Error('This implementation no longer exists.')
+    const item = requireActiveImplementation(workspace, id)
     if (changes.status !== undefined) item.status = changes.status
     if (changes.notes !== undefined) item.notes = changes.notes
     if (changes.environment !== undefined) item.environment = changes.environment
@@ -491,15 +617,15 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   async deleteImplementation(id: string) {
     const workspace = this.read()
     const data = workspace.implementationData
-    if (!data.implementations.some(item => item.id === id)) throw new Error('This implementation no longer exists.')
+    requireActiveImplementation(workspace, id)
     removeImplementations(data, item => item.id === id)
     this.write(workspace)
   }
 
   async createTask(task: Omit<ImplementationTask, 'order'>) {
     const workspace = this.read()
-    const { tasks, implementations } = workspace.implementationData
-    if (!implementations.some(item => item.id === task.implementationId)) throw new Error('This implementation no longer exists.')
+    const { tasks } = workspace.implementationData
+    requireActiveImplementation(workspace, task.implementationId)
     if (tasks.some(item => item.id === task.id)) throw new Error('A task with this ID already exists.')
     const last = orderedTasks(tasks, task.implementationId).at(-1)
     tasks.push({ ...task, order: (last?.order ?? 0) + 1 })
@@ -510,6 +636,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     const workspace = this.read()
     const task = workspace.implementationData.tasks.find(item => item.id === id)
     if (!task) throw new Error('This task no longer exists.')
+    requireActiveImplementation(workspace, task.implementationId)
     task.title = changes.title
     task.description = changes.description
     task.status = changes.status
@@ -520,6 +647,9 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
   async deleteTask(id: string) {
     const workspace = this.read()
     const tasks = workspace.implementationData.tasks
+    const existing = tasks.find(task => task.id === id)
+    if (!existing) throw new Error('This task no longer exists.')
+    requireActiveImplementation(workspace, existing.implementationId)
     removeItem(tasks, id, 'This task no longer exists.')
     const updatedAt = new Date().toISOString()
     for (const task of tasks) {
@@ -536,6 +666,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     const tasks = workspace.implementationData.tasks
     const task = tasks.find(item => item.id === id)
     if (!task) throw new Error('This task no longer exists.')
+    requireActiveImplementation(workspace, task.implementationId)
     const ordered = orderedTasks(tasks, task.implementationId)
     const from = ordered.indexOf(task)
     const to = typeof destination === 'string' ? ordered.findIndex(item => item.id === destination) : from + destination
@@ -561,6 +692,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     const tasks = workspace.implementationData.tasks
     const task = tasks.find(item => item.id === taskId)
     if (!task) throw new Error('This task no longer exists.')
+    requireActiveImplementation(workspace, task.implementationId)
 
     switch (change.kind) {
       case 'addCriterion': {
@@ -600,9 +732,7 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
       case 'addReference':
       case 'updateReference': {
         const { reference } = change
-        if (reference.kind === 'topic' && !workspace.topics.some(topic => topic.id === reference.topicId)) {
-          throw new Error('This topic no longer exists.')
-        }
+        if (reference.kind === 'topic') requireActiveTopic(workspace, reference.topicId)
         const index = task.references.findIndex(item => item.id === reference.id)
         if (change.kind === 'addReference') {
           if (index !== -1) throw new Error('This reference already exists.')
@@ -623,8 +753,8 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
 
   async createArtifact(artifact: ImplementationArtifact) {
     const workspace = this.read()
-    const { artifacts, implementations } = workspace.implementationData
-    if (!implementations.some(item => item.id === artifact.implementationId)) throw new Error('This implementation no longer exists.')
+    const { artifacts } = workspace.implementationData
+    requireActiveImplementation(workspace, artifact.implementationId)
     if (artifacts.some(item => item.id === artifact.id)) throw new Error('This artifact already exists.')
     artifacts.push(artifact)
     this.write(workspace)
@@ -634,12 +764,16 @@ export class LocalStorageTopicRepository implements TopicRepository, Implementat
     const workspace = this.read()
     const artifact = workspace.implementationData.artifacts.find(item => item.id === id)
     if (!artifact) throw new Error('This artifact no longer exists.')
+    requireActiveImplementation(workspace, artifact.implementationId)
     Object.assign(artifact, changes, { updatedAt: new Date().toISOString() })
     this.write(workspace)
   }
 
   async deleteArtifact(id: string) {
     const workspace = this.read()
+    const artifact = workspace.implementationData.artifacts.find(item => item.id === id)
+    if (!artifact) throw new Error('This artifact no longer exists.')
+    requireActiveImplementation(workspace, artifact.implementationId)
     removeItem(workspace.implementationData.artifacts, id, 'This artifact no longer exists.')
     this.write(workspace)
   }

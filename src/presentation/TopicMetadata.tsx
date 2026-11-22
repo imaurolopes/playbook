@@ -181,7 +181,7 @@ export function TopicMetadata({ topic, workspace, service, onSave }: {
       <div className="metadata-actions">
         {error && <p className="error" role="alert">{error}</p>}
         <span className="green" role="status">{message}</span>
-        <button className="button primary" type="submit" disabled={!dirty || busy}><Save size={16} /> {busy ? 'Saving…' : 'Save metadata'}</button>
+        <button className="button primary" type="submit" disabled={!dirty || busy}><Save size={16} /> {busy ? 'Saving…' : 'Save'}</button>
       </div>
     </fieldset>
   </form>

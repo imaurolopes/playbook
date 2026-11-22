@@ -123,7 +123,7 @@ export function generateInstructions(source: InstructionSource, options: Instruc
   function render(kind: ArtifactKind) {
     const title = text(topic.title) + ({ agents: '', prompt: ' — Implementation prompt', checklist: ' — Checklist' }[kind])
     const sections = ['# ' + title]
-    if (kind === 'agents') sections.push('Topic ID: ' + text(topic.id) + '  \nScope: ' + text(topic.scope))
+    if (kind === 'agents') sections.push('Topic ID: ' + text(topic.id))
     const append = (heading: string, body: string) => {
       if (body.trim()) sections.push('## ' + heading + '\n\n' + body.trim())
     }
@@ -141,7 +141,7 @@ export function generateInstructions(source: InstructionSource, options: Instruc
 
   const yaml = stringify({
     topic: {
-      id: topic.id, title: topic.title, scope: topic.scope,
+      id: topic.id, title: topic.title,
       description: topic.description.trim() || undefined,
       content: standards.trim() ? standards : undefined,
     },
