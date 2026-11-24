@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseDocument } from 'yaml'
 import { ImplementationService } from '../application/implementation-service'
 import { InstructionService, RegenerationConfirmationRequired } from '../application/instruction-service'
@@ -10,6 +10,7 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 
 const date = '2026-11-19T12:00:00.000Z'
 const topic: Topic = {
+  type: 'General',
   id: 'cdc', title: 'Change Data Capture (CDC)',
   description: 'Replicate database changes.', content: '### Standards\n\nRetain source offsets.',
   createdAt: date, updatedAt: date,
@@ -34,6 +35,52 @@ describe('agent instructions', () => {
   const topics = new TopicService(repository)
 
   beforeEach(() => entries.clear())
+
+  it('generates project-independent knowledge with ordered checklist tasks and deduplicated upstream context', async () => {
+    await addSource()
+    await topics.addRelationship({ sourceTopicId: topic.id, targetTopicId: indirect.id, type: 'dependency' })
+    await plans.saveTaskDefinition({
+      id: 'definition-a', topicId: topic.id, title: 'Read offsets', description: 'Read the durable cursor.', order: 1,
+      createdAt: date, updatedAt: date, criteria: [], dependencyIds: [], references: [],
+    })
+    await plans.saveTaskDefinition({
+      id: 'definition-b', topicId: topic.id, title: 'Verify offsets', description: 'Replay the **same** batch.', order: 2,
+      createdAt: date, updatedAt: date, criteria: [{ id: 'criterion', description: 'Verify the stored cursor.', order: 1 }],
+      dependencyIds: ['definition-a'], references: [{ id: 'reference', kind: 'url', title: 'Offset guidance', url: 'https://example.com/offsets' }],
+    })
+    const topicKey = { topicId: topic.id, agentProfileId: 'claude-code' }
+    await instructions.saveSettings(topicKey, { usage: 'implementation', objective: 'Legacy objective from saved settings' })
+    const reads = vi.spyOn(repository, 'readImplementations')
+    try {
+      const originalTopic = await repository.getById(topic.id)
+      await instructions.load(topicKey)
+      const draft = await instructions.generate(topicKey, defaultInstructionOptions)
+      await expect(instructions.saveEdit(topicKey, 'Attempted manual edit')).rejects.toThrow('read-only')
+      expect(await repository.getById(topic.id)).toEqual(originalTopic)
+      expect(await instructions.isOutdated(topicKey, defaultInstructionOptions, draft)).toBe(false)
+      expect(await instructions.isOutdated(topicKey, { ...defaultInstructionOptions, plan: false }, draft)).toBe(true)
+      expect(reads).not.toHaveBeenCalled()
+      expect(draft.markdown).toContain('Topic type: General')
+      expect(draft.markdown).toContain('## Checklist')
+      expect(draft.markdown).toMatch(/1\. \*\*Read offsets\*\*[\s\S]*2\. \*\*Verify offsets\*\*[\s\S]*Depends on: Read offsets[\s\S]*Verify the stored cursor\./)
+      expect(draft.markdown).toContain('Data Ingestion depends on Indirect upstream topic')
+      expect(draft.markdown.match(/### Indirect upstream topic/g)).toHaveLength(1)
+      expect(draft.markdown).toContain('## Related topics\n\n- Event Streaming')
+      const generated = [draft.markdown, draft.artifacts?.prompt, draft.artifacts?.checklist, draft.yaml].join('\n')
+      expect(generated).not.toMatch(/Azure Data Platform|Downstream consumer|feature\/cdc|Environment:|\(Done\)|CDC runbook|established ingestion schema/)
+      expect(generated).not.toMatch(/## Objective|## Implementation request|## Expected outcome|Legacy objective from saved settings/)
+      expect(parseDocument(draft.yaml!).toJS()).not.toHaveProperty('objective')
+      expect((await instructions.settings(topicKey)).objective).toBe('Legacy objective from saved settings')
+      expect(parseDocument(draft.yaml!).toJS().taskDefinitions[1]).toMatchObject({
+        title: 'Verify offsets', references: [{ title: 'Offset guidance' }], acceptanceCriteria: [{ description: 'Verify the stored cursor.' }],
+      })
+      const withoutChecklist = await instructions.generate(topicKey, { ...defaultInstructionOptions, plan: false })
+      expect([withoutChecklist.markdown, withoutChecklist.artifacts?.prompt, withoutChecklist.artifacts?.checklist, withoutChecklist.yaml].join('\n'))
+        .not.toMatch(/Read offsets|Verify the stored cursor/)
+    } finally {
+      reads.mockRestore()
+    }
+  })
 
   async function addSource() {
     await topics.addRelationship({ sourceTopicId: topic.id, targetTopicId: ingestion.id, type: 'dependency', description: 'CDC reads ingestion offsets.' })
@@ -121,11 +168,16 @@ describe('agent instructions', () => {
     const contexts = [key, { ...key, projectId: aws }, { ...key, projectId: undefined }, { ...key, agentProfileId: 'codex' }, { ...key, topicId: streaming.id }]
     for (const [index, context] of contexts.entries()) {
       await instructions.generate(context, defaultInstructionOptions)
-      await instructions.saveEdit(context, '# Draft ' + index + '\n\nEdited Markdown.\n')
+      if (context.projectId) await instructions.saveEdit(context, '# Draft ' + index + '\n\nEdited Markdown.\n')
     }
     const reopened = new InstructionService(new LocalStorageTopicRepository(() => storage))
     for (const [index, context] of contexts.entries()) {
       const { draft } = await reopened.load(context)
+      if (!context.projectId) {
+        expect(draft?.manuallyEdited).toBe(false)
+        expect(draft?.markdown).toBe(draft?.generatedMarkdown)
+        continue
+      }
       expect(draft).toMatchObject({
         markdown: '# Draft ' + index + '\n\nEdited Markdown.\n', manuallyEdited: true,
         lastEditedAt: expect.any(String), lastGeneratedAt: expect.any(String),
@@ -194,6 +246,8 @@ describe('agent instructions', () => {
   it('creates independent artifacts with sourced validation, constraints and deliverables', async () => {
     await addSource()
     await topics.save({ ...topic, content: topic.content + '\n\n## Constraints\n\nUse the existing schema.\n\n## Validation requirements\n\nReplay stored events.' }, topic.id)
+    const [implementation] = (await plans.list()).implementations
+    await plans.upgradeImplementationKnowledge(implementation!.id)
     const generated = await instructions.generate(key, defaultInstructionOptions)
     expect(generated.markdown).toContain('## Constraints\n\nUse the existing schema.')
     expect(generated.artifacts?.prompt).toContain('## Deliverables\n\n- [CDC runbook]')
@@ -240,8 +294,8 @@ describe('agent instructions', () => {
     await instructions.saveSettings(key, { usage: 'topic' })
     const topicOnly = parseDocument((await instructions.generate(key, { ...defaultInstructionOptions, content: false, dependencies: false })).yaml!).toJS()
     expect(topicOnly).toEqual({
-      topic: { id: topic.id, title: topic.title, description: topic.description },
-      objective: topic.description, usageContext: 'topic',
+      topic: { id: topic.id, title: topic.title, type: topic.type, description: topic.description },
+      usageContext: 'topic',
     })
     await instructions.saveSettings(key, { usage: 'project' })
     const projectOnly = parseDocument((await instructions.generate(key, defaultInstructionOptions)).yaml!).toJS()
@@ -361,6 +415,14 @@ describe('agent instructions', () => {
     await addSource()
     const existing = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
     delete existing.instructionDrafts
+    delete existing.topicVersions
+    delete existing.taskDefinitions
+    for (const plan of existing.implementationData.implementations) delete plan.knowledgeVersionId
+    for (const task of existing.implementationData.tasks) {
+      delete task.knowledgeVersionId
+      delete task.definitionId
+      delete task.projectDefinition
+    }
     if (version === 2) delete existing.implementationData
     existing.version = version
     const raw = JSON.stringify(existing)
@@ -369,7 +431,7 @@ describe('agent instructions', () => {
     expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
     await instructions.generate(key, defaultInstructionOptions)
     const saved = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
-    expect(saved).toMatchObject({ ...existing, version: 5 })
+    expect(saved).toMatchObject({ ...existing, version: 6 })
     expect(saved.instructionDrafts).toHaveLength(1)
   })
 })

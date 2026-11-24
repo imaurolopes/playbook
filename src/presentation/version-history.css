@@ -44,7 +44,11 @@
   content: '';
 }
 .version-entry[data-current]::before { border-color: var(--green); background: var(--green); box-shadow: 0 0 0 3px #23533d; }
-.version-entry[data-selected] { border-color: #5a526d; background: #191923; }
+.version-entry:hover { background: #252133; }
+.version-entry[data-selected] { border-color: #8a5bea; background: #2a213e; }
+.version-entry-info { cursor: pointer; }
+.version-select { font: inherit; color: inherit; padding: 0; }
+.version-select:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
 .version-entry-info h3 { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 1rem; font-weight: 700; }
 .version-entry-info p { margin: 5px 0 0; white-space: pre-wrap; }
 .version-pill { border-radius: 99px; padding: 1px 8px; background: #353041; color: #e0d5f3; font-weight: 500; font-size: .75rem; }
@@ -84,6 +88,17 @@
 .version-diff-added { background: #192f25; color: #b3f5d0; }
 .version-dialog fieldset { padding: 0; border: 0; min-width: 0; margin: 10px 0 0; }
 .version-dialog .field { resize: vertical; }
+.version-create-dialog { width: min(600px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); overflow: auto; }
+.version-create-fields, .version-detected-list { display: grid; gap: 10px; }
+.version-restore-warning { border-inline-start: 3px solid var(--purple); padding-inline-start: 8px; }
+.version-detected-list { max-height: 30dvh; overflow: auto; margin-top: 8px; }
+.version-detected-list ul { list-style: none; display: grid; gap: 4px; margin: 3px 0 0; padding: 0; }
+.version-detected-list li { display: flex; align-items: baseline; gap: 8px; overflow-wrap: anywhere; }
+.version-change-tag { padding: 1px 6px; border-radius: 4px; font-size: .8rem; }
+.version-change-tag.is-added { background: #192f25; color: #b3f5d0; }
+.version-change-tag.is-removed { background: #382128; color: #ffd1d8; }
+.version-change-tag.is-modified { background: #332847; color: #dcc5ff; }
+.version-entry-actions [aria-disabled="true"] { color: var(--muted); cursor: default; }
 
 @container version-history (width < 650px) {
   .version-history > section, .version-sidebar { grid-column: 1 / -1; }

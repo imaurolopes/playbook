@@ -4,7 +4,7 @@ export const artifactKinds = Object.keys(artifactNames) as ArtifactKind[]
 
 export const templateSections = {
   objective: 'Objective', context: 'Technical context', standards: 'Playbook standards',
-  dependencies: 'Dependencies', project: 'Project', plan: 'Implementation tasks',
+  dependencies: 'Dependencies', project: 'Project', plan: 'Checklist',
   guidance: 'Implementation guidance', constraints: 'Constraints', references: 'References',
   request: 'Implementation request', outcome: 'Expected outcome', steps: 'Implementation steps',
   deliverables: 'Deliverables', checklist: 'Implementation checklist', validation: 'Validation requirements',

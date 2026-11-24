@@ -19,25 +19,13 @@
 }
 
 .implementation-toolbar .field, .implementation-toolbar .button { min-height: 32px; padding-block: 4px; }
-.implementation-controls { margin-left: auto; }
-
-.implementation-toolbar label,
-.implementation-status {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  min-width: 0;
-  gap: 10px;
-}
+.implementation-toolbar h2 { flex: 0 0 112px; font-size: 1rem; }
 
 .implementation-project-control { display: flex; align-items: center; gap: 7px; flex: 1 1 220px; max-width: 335px; min-width: 0; }
-.implementation-project-control > label { flex: 1; }
-.implementation-project-control > button { flex: none; }
-.implementation-progress-controls { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.implementation-status select { min-width: 105px; }
+.implementation-project-control > select { flex: 1; }
+.implementation-project-control > .button { flex: none; }
 
-.implementation-controls,
-.task-controls,
+.task-controls, .task-action-group,
 .implementation-dialog-actions {
   display: flex;
   align-items: center;
@@ -46,7 +34,6 @@
 }
 
 .implementation-toolbar .field,
-.implementation-status .field,
 .implementation-dialog .field {
   display: block;
   width: 100%;
@@ -54,7 +41,6 @@
 }
 
 .implementation-toolbar select,
-.implementation-status select,
 .implementation-dialog select { padding-inline-end: 26px; }
 
 .implementation-grid {
@@ -98,7 +84,8 @@
 
 .implementation-task-row {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px 6rem;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -106,7 +93,7 @@
 }
 
 .implementation-task-row:hover { background: #232331; }
-.implementation-task-row:has([aria-expanded="true"]) { background: #30234c; border-color: #8a5bea; }
+.implementation-task-row:where(:has(.implementation-task:is([aria-expanded="true"], [aria-pressed="true"]))) { background: #30234c; border-color: #8a5bea; }
 .implementation-task-row[data-dragging] {
   z-index: 2;
   border-color: #a687ff;
@@ -127,7 +114,6 @@
 .implementation-task-row[data-drop-edge="after"]::after { bottom: -3px; }
 .task-grip {
   display: grid;
-  flex: 0 0 32px;
   place-items: center;
   border-radius: 7px 0 0 7px;
   color: var(--muted);
@@ -136,28 +122,34 @@
 }
 .task-grip:hover:not(:disabled), .task-grip:focus-visible { color: var(--text); background: #ffffff12; }
 .task-grip:disabled { cursor: default; opacity: .45; touch-action: auto; }
+.definition-task-row { grid-template-columns: 32px minmax(0, 1fr) 34px 34px; }
+.definition-task-row .implementation-task { grid-template-columns: minmax(0, 1fr); }
+.definition-task-row .detail-action { place-self: center; }
+.definition-task-row .task-move { cursor: pointer; }
+.definition-task-row .task-move:disabled { cursor: default; }
+.definition-task-row .implementation-task[aria-pressed="true"] .task-title { font-weight: 650; }
 .implementation-task-row[data-dragging] .task-grip { cursor: grabbing; }
+.implementation-tasks:has(.definition-task-row[data-dragging]) .definition-task-row :is(button, .task-move:disabled) { cursor: grabbing; }
 .implementation-task {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr) 15px;
   align-items: center;
   gap: 9px;
-  flex: 1;
   min-width: 0;
   min-height: 34px;
-  padding: 4px 10px 4px 1px;
-  border-radius: 0 7px 7px 0;
+  padding: 4px 6px 4px 1px;
   text-align: left;
 }
 
 .implementation-task[aria-expanded="true"] .task-title { font-weight: 650; }
-.task-label { display: flex; align-items: baseline; min-width: 0; gap: 7px; }
-.task-number { flex: 0 0 2.5ch; color: var(--muted); text-align: end; font-variant-numeric: tabular-nums; }
-.task-title { min-width: 0; }
-.task-row-status { display: flex; align-items: center; gap: 8px; }
+.task-label { display: grid; grid-template-columns: 3ch minmax(0, 1fr); align-items: baseline; min-width: 0; gap: 7px; }
+.task-number { color: var(--muted); text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.task-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row-edit.button { place-self: center; min-height: 28px; padding: 4px 6px; }
+.task-row-status { display: flex; align-items: center; padding-inline: 6px 9px; }
 .implementation-task[aria-expanded="true"] .task-chevron { transform: rotate(180deg); }
 .task-chevron { color: var(--muted); }
-.task-title, .task-detail-title, .task-description { overflow-wrap: anywhere; }
+.task-detail-title, .task-description { overflow-wrap: anywhere; }
 
 .implementation .task-mark {
   display: inline-grid;
@@ -185,7 +177,7 @@
 
 .implementation-progress {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  align-content: start;
   gap: 10px;
 }
 
@@ -230,21 +222,7 @@
 .progress-summary li strong { font-variant-numeric: tabular-nums; }
 .progress-summary small { font-size: .82rem; }
 
-.implementation-config {
-  display: grid;
-  grid-template-columns: minmax(78px, auto) minmax(0, 1fr);
-  align-items: center;
-  gap: 8px 10px;
-}
-
-.implementation-config select { width: 100%; }
-.implementation-config .field { min-width: 0; min-height: 36px; padding-block: 5px; }
-.implementation-branch { display: flex; min-width: 0; gap: 4px; align-items: center; }
-.branch-field { flex: 1; gap: 5px; color: var(--muted); }
-.branch-field:focus-within { outline: 1px solid var(--purple); }
-.branch-field svg { flex: none; }
-.branch-field input { width: 100%; min-width: 0; background: transparent; color: var(--text); }
-.implementation-delete.button:hover, .task-delete.button:hover { color: #ffabbc; }
+.implementation-remove.button:hover, .task-delete.button:hover { color: #ffabbc; }
 .mark-done.button { background: #2b2148; }
 .mark-done.button:hover { background: #493672; }
 
@@ -266,16 +244,25 @@
 
 .task-detail-title svg { margin-top: 2px; }
 .task-description { margin-top: 6px; white-space: pre-wrap; }
-.task-context { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; margin-top: 12px; }
-.task-context section + section { margin-top: 10px; }
+.task-context { display: grid; gap: 12px; margin-top: 12px; }
 .task-context h4 { font-size: .95rem; font-weight: 650; margin: 0 0 5px; }
+.definition-task-details section + section { border-top: 1px solid var(--line); padding-top: 12px; }
+.definition-task-details h3 { display: flex; align-items: center; gap: 8px; font-size: .95rem; margin-bottom: 6px; }
+.criterion-info { position: relative; display: inline-flex; align-items: center; color: var(--muted); cursor: help; }
+.criterion-tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 0; z-index: 3; width: min(220px, 55vw); padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #232331; color: var(--text); font-size: .84rem; font-weight: 400; }
+.criterion-info:is(:hover, :focus) .criterion-tooltip { display: block; }
 .implementation-detail-list { display: grid; gap: 4px; padding: 0; margin: 0 0 6px; list-style: none; }
 .implementation-detail-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 7px; min-width: 0; padding: 4px 6px; border-radius: 6px; background: var(--side); font-size: .88rem; overflow-wrap: anywhere; }
 .implementation-detail-row > svg, .implementation-resource-link svg { flex: none; }
+.definition-criterion { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; }
+.definition-criterion > svg { margin-top: 0.2em; }
+.definition-criterion > span { white-space: pre-wrap; }
 .implementation-detail-actions { display: flex; flex-wrap: wrap; gap: 3px; margin-inline-start: auto; }
 .detail-action.button { min-height: 28px; width: 28px; padding: 3px; }
-.detail-add.button { min-height: 28px; padding: 3px 7px; font-size: .84rem; }
-.criterion-label { display: flex; flex: 1 1 7ch; align-items: start; gap: 6px; min-width: 0; }
+.task-criteria .implementation-detail-list { gap: 6px; }
+.task-criteria .implementation-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 6px 8px; }
+.task-criteria .implementation-detail-actions { flex-wrap: nowrap; }
+.criterion-label { display: flex; align-items: start; gap: 8px; min-width: 0; }
 .criterion-label input { width: 15px; height: 15px; margin-top: 3px; flex: none; accent-color: var(--purple); }
 .implementation-resource-link { display: inline-flex; align-items: center; gap: 4px; min-width: 0; text-align: start; color: var(--purple); }
 .implementation-resource-link:hover { text-decoration: underline; }
@@ -286,7 +273,8 @@
 .artifact-details p { margin: 3px 0 0; white-space: pre-wrap; }
 .artifact-add.button { margin-top: auto; border-color: var(--purple); background: transparent; }
 .task-controls { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-.task-delete.button { margin-left: auto; }
+.implementation-details .implementation-heading .task-action-group, .task-controls .task-action-group:last-child { justify-content: flex-end; margin-inline-start: auto; }
+.task-controls .button { min-height: 32px; padding-block: 4px; }
 .notes-mode { width: max-content; margin-bottom: 8px; }
 .implementation .markdown-input { width: 100%; resize: vertical; }
 .implementation-panel .markdown > :first-child { margin-top: 0; }
@@ -336,6 +324,39 @@
 .implementation-form-field .field { background: #101117; color: var(--text); }
 .implementation-dialog textarea { min-height: 90px; resize: vertical; }
 
+.delete-dialog.implementation-dialog.task-editor-dialog {
+  width: min(850px, calc(100% - 28px));
+  overflow: hidden;
+}
+.task-editor-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.task-editor-dialog > form, .task-editor-dialog > form > fieldset {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+.task-editor-dialog > form > fieldset { grid-template-rows: minmax(0, 1fr) auto; }
+.task-editor-dialog .implementation-dialog-body {
+  align-content: start;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
+.task-criterion-editor, .task-criterion-field {
+  display: grid;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+.task-criterion-editor { grid-template-columns: minmax(0, 1fr) auto; }
+.task-criterion-field { grid-template-columns: auto minmax(0, 1fr); }
+.implementation-form-field .task-criterion-field { font-weight: 400; }
+.task-criterion-field > span { padding-block-start: 8px; min-width: 2ch; text-align: end; }
+.task-editor-dialog .task-criterion-field textarea {
+  min-height: 37px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
 @container implementation (max-width: 560px) {
   .implementation-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -345,15 +366,14 @@
 }
 
 @container implementation (max-width: 730px) {
-  .task-context { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 }
 
 @container implementation (max-width: 430px) {
   .implementation-project-control { flex-basis: 100%; max-width: none; }
-  .implementation-controls { margin-left: 0; }
+  .implementation-toolbar h2 { flex-basis: 100%; }
   .implementation-heading h2 { font-size: 1.125rem; }
-  .implementation-task { gap: 6px; padding-inline-end: 8px; }
-  .task-row-status { gap: 4px; }
+  .implementation-task { gap: 6px; padding-inline-end: 4px; }
+  .task-row-status { padding-inline: 4px 5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

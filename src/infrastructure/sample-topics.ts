@@ -1,9 +1,9 @@
-import type { Topic } from '../domain/topic'
+import { defaultTopicType, type Topic } from '../domain/topic'
 
 const createdAt = '2026-11-19T12:00:00.000Z'
 
 function sample(id: string, title: string, description: string, content: string): Topic {
-  return { id, title, description, content, createdAt, updatedAt: createdAt }
+  return { id, type: defaultTopicType, title, description, content, createdAt, updatedAt: createdAt }
 }
 
 

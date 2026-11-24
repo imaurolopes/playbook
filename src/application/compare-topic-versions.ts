@@ -50,7 +50,8 @@ function compareLinks(before: readonly VersionRelationship[], after: readonly Ve
 export function compareTopicVersions(before: TopicSnapshot, after: TopicSnapshot) {
   const fields = [
     { label: 'Title', before: before.title, after: after.title },
-    { label: 'Description', before: before.description, after: after.description },
+    { label: 'Topic type', before: before.type ?? 'General', after: after.type ?? 'General' },
+    { label: 'Summary', before: before.description, after: after.description },
   ].filter(field => field.before !== field.after)
   const metadata = [
     ...(before.metadata.source?.id !== after.metadata.source?.id ? [
@@ -58,11 +59,50 @@ export function compareTopicVersions(before: TopicSnapshot, after: TopicSnapshot
     ] : []),
     ...metadataChanges(before.metadata.details, after.metadata.details),
   ]
+  const definitions = (snapshot: TopicSnapshot) => new Map(snapshot.taskDefinitions?.map((task, position) => {
+    const ordering = String(position + 1)
+    const orderedCriteria = [...task.criteria].sort((a, b) => a.order - b.order)
+    const criteria = orderedCriteria.map(criterion => `• ${criterion.description}`).join('\n')
+    const dependencies = task.dependencyIds.map(id => `Depends on ${snapshot.taskDefinitions?.find(item => item.id === id)?.title ?? id}`).join('\n')
+    const references = task.references.map(reference => reference.kind === 'topic'
+      ? `Topic reference: ${reference.topicId}` : `Reference: ${reference.title} ${reference.url ?? ''}`.trim()).join('\n')
+    return [task.id, { label: task.title, value: [
+      `${position + 1}. ${task.title}`, task.description,
+      criteria, dependencies, references,
+    ].filter(Boolean).join('\n'), parts: {
+      Title: task.title, 'Task instructions': task.description, 'Task ordering': ordering,
+      'Task dependencies': JSON.stringify(task.dependencyIds),
+      'Acceptance criteria': JSON.stringify(orderedCriteria.map(({ id, description }) => [id, description])),
+      References: JSON.stringify(task.references.map(reference => reference.kind === 'topic'
+        ? [reference.id, reference.kind, reference.topicId] : [reference.id, reference.kind, reference.title, reference.url])),
+    } }] as const
+  }))
+  const sections = (snapshot: TopicSnapshot) => new Map(snapshot.knowledgeSections?.map((section, position) => [
+    section.id, { label: section.title, value: `${position + 1}. ${section.title}\n\n${section.content}` },
+  ]))
   return {
     fields, metadata, content: compareContent(before.content, after.content),
+    implementation: compareRecords(definitions(before), definitions(after)),
+    standards: compareRecords(sections(before), sections(after)),
     dependencies: compareLinks(before.dependencies, after.dependencies),
+    dependents: compareLinks(before.dependents ?? [], after.dependents ?? []),
     related: compareLinks(before.related, after.related),
   }
 }
 
+type ComparedRecord = { label: string; value: string; parts?: Record<string, string> }
+
+function compareRecords(before: ReadonlyMap<string, ComparedRecord>, after: ReadonlyMap<string, ComparedRecord>) {
+  return [...new Set([...before.keys(), ...after.keys()])].flatMap(id => {
+    const old = before.get(id)
+    const next = after.get(id)
+    const details = old?.parts && next?.parts ? Object.keys(next.parts).filter(label => old.parts?.[label] !== next.parts?.[label]) : []
+    return old?.value === next?.value && !details.length ? [] : [{ id, label: (next ?? old)!.label, before: old?.value, after: next?.value, details }]
+  })
+}
+
 export type TopicVersionComparison = ReturnType<typeof compareTopicVersions>
+
+export function hasTopicVersionChanges(changes: TopicVersionComparison) {
+  return Object.values(changes).some(items => items.length > 0)
+}

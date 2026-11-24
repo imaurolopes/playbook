@@ -5,20 +5,16 @@ import {
   artifactKinds, artifactNames, availableSections, defaultGenerationTemplate, templateSections,
   type ArtifactKind, type GenerationTemplate, type TemplateInput, type TemplateSection,
 } from '../domain/generation-template'
+import { ContextActions } from './TopicActions'
 
 const emptyTemplate = (): TemplateInput => ({
   name: '', description: '', sections: {
-    agents: [...availableSections.agents], prompt: [...availableSections.prompt], checklist: [...availableSections.checklist],
+    agents: availableSections.agents.filter(section => section !== 'objective'), prompt: [...availableSections.prompt], checklist: [...availableSections.checklist],
   },
 })
 
-export function GenerationTemplates({ service, selectedId, disabled, onSelect }: {
-  service: InstructionService
-  selectedId?: string
-  disabled: boolean
-  onSelect: (id: string) => void
-}) {
-  const [templates, setTemplates] = useState([defaultGenerationTemplate])
+export function GenerationTemplates({ service }: { service: InstructionService }) {
+  const [templates, setTemplates] = useState<GenerationTemplate[]>()
   const [mode, setMode] = useState<'create' | 'edit' | 'delete'>('create')
   const [editing, setEditing] = useState<GenerationTemplate>()
   const [input, setInput] = useState<TemplateInput>(emptyTemplate)
@@ -27,7 +23,6 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
   const [error, setError] = useState('')
   const [dialogError, setDialogError] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
-  const selected = templates.find(item => item.id === selectedId) ?? defaultGenerationTemplate
 
   useEffect(() => {
     let active = true
@@ -37,10 +32,10 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
     return () => { active = false }
   }, [service])
 
-  function open(nextMode: typeof mode) {
+  function open(nextMode: typeof mode, template?: GenerationTemplate) {
     setMode(nextMode)
-    setEditing(nextMode === 'create' ? undefined : selected)
-    setInput(nextMode === 'create' ? emptyTemplate() : selected)
+    setEditing(template)
+    setInput(template ?? emptyTemplate())
     setArtifact('agents')
     setDialogError('')
     dialog.current?.showModal()
@@ -52,12 +47,10 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
     try {
       if (mode === 'delete' && editing) {
         await service.deleteTemplate(editing.id)
-        setTemplates(items => items.filter(item => item.id !== editing.id))
-        if (selectedId === editing.id) onSelect(defaultGenerationTemplate.id)
+        setTemplates(items => items?.filter(item => item.id !== editing.id))
       } else {
         const saved = await service.saveTemplate(input, mode === 'edit' ? editing?.id : undefined)
-        setTemplates(items => mode === 'edit' ? items.map(item => item.id === saved.id ? saved : item) : [...items, saved])
-        onSelect(saved.id)
+        setTemplates(items => mode === 'edit' ? items?.map(item => item.id === saved.id ? saved : item) : [...(items ?? []), saved])
       }
       dialog.current?.close()
     } catch (problem) {
@@ -67,13 +60,12 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
     }
   }
 
-  async function duplicate() {
+  async function duplicate(template: GenerationTemplate) {
     setBusy(true)
     setError('')
     try {
-      const copy = await service.duplicateTemplate(selected.id)
-      setTemplates(items => [...items, copy])
-      onSelect(copy.id)
+      const copy = await service.duplicateTemplate(template.id)
+      setTemplates(items => [...(items ?? []), copy])
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : 'Could not duplicate the template.')
     } finally {
@@ -81,9 +73,12 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
     }
   }
 
-  const sections = input.sections[artifact]
-  const excluded = availableSections[artifact].filter(section => !sections.includes(section))
+  const storedSections = input.sections[artifact]
+  const sections = storedSections.filter(section => section !== 'objective')
+  const excluded = availableSections[artifact].filter(section => section !== 'objective' && !sections.includes(section))
   function changeSections(next: TemplateSection[]) {
+    const objectiveIndex = storedSections.indexOf('objective')
+    if (objectiveIndex >= 0) next.splice(objectiveIndex, 0, 'objective')
     setInput(current => ({ ...current, sections: { ...current.sections, [artifact]: next } }))
   }
   function moveSection(index: number, direction: number) {
@@ -94,24 +89,31 @@ export function GenerationTemplates({ service, selectedId, disabled, onSelect }:
     changeSections(next)
   }
 
-  return <section className="panel agent-template" aria-labelledby="agent-template-title">
-    <h2 id="agent-template-title">Generation template</h2>
-    <div className="agent-field">
-      <select className="field" aria-label="Generation template" value={selected.id} disabled={disabled || busy}
-        onChange={event => onSelect(event.target.value)}>
-        {templates.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select>
-      {selected.description && <p className="muted agent-hint">{selected.description}</p>}
-    </div>
-    <div className="agent-preview-actions">
-      <button className="button" disabled={disabled || busy} onClick={() => open('create')}><Plus size={15} /> New</button>
-      <button className="button" disabled={disabled || busy} onClick={() => void duplicate()}><Copy size={15} /> Duplicate</button>
-      {!selected.isSystem && <>
-        <button className="button" disabled={disabled || busy} onClick={() => open('edit')}><Pencil size={15} /> Edit</button>
-        <button className="button" disabled={disabled || busy} onClick={() => open('delete')}><Trash2 size={15} /> Delete</button>
-      </>}
+  return <section className="panel workspace-templates" aria-labelledby="agent-template-title">
+    <div className="workspace-templates-header">
+      <h1 id="agent-template-title">Templates</h1>
+      <button className="button primary" disabled={busy || !templates} onClick={() => open('create')}><Plus size={15} /> New template</button>
     </div>
     {error && <p className="error" role="alert">{error}</p>}
+    {!templates && !error && <p role="status">Loading templates…</p>}
+    {templates && <ul className="workspace-template-list">
+      {templates.map(template => <li key={template.id}>
+        <div>
+          <h2>{template.name}</h2>
+          {template.isSystem && <p className="muted agent-hint">{template.id === defaultGenerationTemplate.id ? 'Default · Built-in' : 'Built-in'}</p>}
+          {template.description && <p className="agent-hint">{template.description}</p>}
+          <p className="muted agent-hint">{artifactKinds.map(kind => artifactNames[kind]).join(' · ')}</p>
+        </div>
+        <ContextActions title={template.name} buttonTitle="Template actions" entries={[
+          { id: 'edit', label: 'Edit', Icon: Pencil, disabled: busy || template.isSystem },
+          { id: 'duplicate', label: 'Duplicate', Icon: Copy, disabled: busy },
+          { id: 'delete', label: 'Delete', Icon: Trash2, destructive: true, disabled: busy || template.isSystem },
+        ]} onAction={action => {
+          if (action === 'duplicate') void duplicate(template)
+          else open(action, template)
+        }} />
+      </li>)}
+    </ul>}
     <dialog ref={dialog} className="panel delete-dialog agent-template-dialog" aria-labelledby="agent-template-dialog-title"
       onCancel={event => { if (busy) event.preventDefault() }}>
       <h2 id="agent-template-dialog-title">{mode === 'delete' ? 'Delete template?' : mode === 'edit' ? 'Edit template' : 'New template'}</h2>

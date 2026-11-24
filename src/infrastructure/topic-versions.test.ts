@@ -5,17 +5,17 @@ import { InstructionService } from '../application/instruction-service'
 import { TopicService } from '../application/topic-service'
 import { defaultInstructionOptions } from '../domain/agent-instructions'
 import type { Topic } from '../domain/topic'
-import { defaultTopicMetadata } from '../domain/topic-metadata'
 import { captureTopicSnapshot, matchesTopicSnapshot } from '../domain/topic-version'
 import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-topic-repository'
 
 const createdAt = '2026-11-19T12:00:00.000Z'
 const topic: Topic = {
+  type: 'General',
   id: 'cdc', title: 'Change Data Capture', description: 'Capture database changes.',
   content: '## Technical standards\n\nRetain source offsets.',
   sourceTopicId: 'external-lineage', createdAt, updatedAt: createdAt,
 }
-const peer = (id: string, title: string): Topic => ({ id, title, description: '', content: '', createdAt, updatedAt: createdAt })
+const peer = (id: string, title: string): Topic => ({ id, type: 'General', title, description: '', content: '', createdAt, updatedAt: createdAt })
 const parent = peer('parent', 'Data Engineering')
 const ingestion = peer('ingestion', 'Data Ingestion')
 const streams = peer('streams', 'Event Streaming')
@@ -41,28 +41,32 @@ describe('topic version history', () => {
     service.addRelationship({ sourceTopicId, targetTopicId, type: 'dependency', description })
 
   it('captures an immutable knowledge snapshot and assigns sequential per-topic numbers', async () => {
-    await depend(topic.id, ingestion.id, 'Read ingestion offsets.')
-    await depend(consumer.id, topic.id)
-    await service.addRelationship({ sourceTopicId: streams.id, targetTopicId: topic.id, type: 'related' })
+    const dependency = await depend(topic.id, ingestion.id, 'Read ingestion offsets.')
+    const dependent = await depend(consumer.id, topic.id)
+    const related = await service.addRelationship({ sourceTopicId: streams.id, targetTopicId: topic.id, type: 'related' })
     await expect(service.createVersion(topic.id, '   ')).rejects.toThrow('change summary')
     const first = await service.createVersion(topic.id, '  Initial standard  ')
     expect(first).toMatchObject({
       topicId: topic.id, versionNumber: 1, summary: 'Initial standard', author: 'Local user', createdAt: expect.any(String),
     })
     expect(first.snapshot).toEqual({
-      title: topic.title, description: topic.description, content: topic.content,
+      title: topic.title, type: topic.type, description: topic.description, content: topic.content,
       metadata: {
         source: { id: 'external-lineage', title: 'external-lineage' },
-        details: defaultTopicMetadata,
+        details: { technicalDomains: [], tags: [], customProperties: [] },
       },
-      dependencies: [{ id: ingestion.id, title: ingestion.title, description: 'Read ingestion offsets.' }],
-      related: [{ id: streams.id, title: streams.title, description: undefined }],
+      dependencies: [{ id: ingestion.id, title: ingestion.title, description: 'Read ingestion offsets.', relationship: expect.objectContaining({ id: dependency.id }) }],
+      dependents: [{ id: consumer.id, title: consumer.title, description: undefined, relationship: expect.objectContaining({ id: dependent.id }) }],
+      related: [{ id: streams.id, title: streams.title, description: undefined, relationship: expect.objectContaining({ id: related.id }) }],
+      taskDefinitions: [],
+      knowledgeSections: [],
     })
     await service.save({ ...topic, title: 'CDC v2' }, topic.id)
     await service.save({ ...ingestion, title: 'Renamed ingestion' }, ingestion.id)
-    const [second, third, other] = await Promise.all([
-      service.createVersion(topic.id, 'Second'), service.createVersion(topic.id, 'Third'), service.createVersion(streams.id, 'Other topic'),
-    ])
+    const second = await service.createVersion(topic.id, 'Second')
+    await expect(service.createVersion(topic.id, 'Identical snapshot')).rejects.toThrow('No meaningful changes')
+    await service.save({ ...topic, title: 'CDC v3' }, topic.id)
+    const [third, other] = await Promise.all([service.createVersion(topic.id, 'Third'), service.createVersion(streams.id, 'Other topic')])
     expect([second.versionNumber, third.versionNumber, other.versionNumber]).toEqual([2, 3, 1])
     const reopened = new TopicService(new LocalStorageTopicRepository(() => storage))
     const history = await reopened.versions(topic.id)
@@ -101,6 +105,75 @@ describe('topic version history', () => {
     expect(Object.values(compareTopicVersions(first.snapshot, first.snapshot)).flat()).toEqual([])
   })
 
+  it('captures and restores reusable standards and Checklist records without changing pinned project work', async () => {
+    await service.readWorkspace()
+    const stored = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
+    const standard = { id: 'standard', topicId: topic.id, key: 'offsets', title: 'Offset policy', content: 'Keep offsets.', order: 0 }
+    stored.knowledgeSections.push(standard)
+    entries.set(TOPIC_STORAGE_KEY, JSON.stringify(stored))
+    const plans = new ImplementationService(repository)
+    await plans.saveTaskDefinition({
+      id: 'verify', topicId: topic.id, title: 'Verify offsets', description: 'Replay input.', order: 1,
+      createdAt, updatedAt: createdAt, dependencyIds: [],
+      criteria: [{ id: 'criterion', description: 'Compare offsets.', order: 1 }],
+      references: [{ id: 'reference', kind: 'topic', topicId: ingestion.id }],
+    })
+    const first = await service.createVersion(topic.id, 'Initial checklist')
+    await plans.createImplementation(topic.id, projectId)
+    const pinned = await plans.list()
+    await repository.saveKnowledgeSection(topic.id, standard.id, 'Use a temporary cursor.')
+    await plans.deleteTaskDefinition(topic.id, 'verify')
+    const working = await service.workingVersion(topic.id)
+    expect(matchesTopicSnapshot(first.snapshot, working.snapshot)).toBe(false)
+    expect(working.updatedAt).toBe((await repository.getById(topic.id))?.updatedAt)
+    expect(compareTopicVersions(first.snapshot, working.snapshot)).toMatchObject({
+      standards: [{ id: 'standard', before: expect.stringContaining('Keep offsets.'), after: expect.stringContaining('Use a temporary cursor.') }],
+      implementation: [{ id: 'verify', before: expect.stringContaining('Compare offsets.') }],
+    })
+    const restored = await service.restoreVersion(topic.id, first.id)
+    expect(restored.version.snapshot.knowledgeSections).toEqual([standard])
+    expect(restored.version.snapshot.taskDefinitions).toMatchObject([
+      { id: 'verify', criteria: [{ id: 'criterion', description: 'Compare offsets.' }], references: [{ id: 'reference' }] },
+    ])
+    expect(restored.version.snapshot.taskDefinitions?.[0]?.criteria[0]).not.toHaveProperty('completed')
+    const afterRestore = await plans.list()
+    expect(afterRestore.implementations).toEqual(pinned.implementations)
+    expect(afterRestore.tasks).toEqual(pinned.tasks)
+    expect(afterRestore.knowledgeVersions).toEqual(pinned.knowledgeVersions)
+    expect((await service.workingVersion(topic.id)).versions.at(-1)).toEqual(first)
+  })
+
+  it('detects Checklist dependency identity, criteria, and references when task titles stay the same', async () => {
+    const plans = new ImplementationService(repository)
+    const task = {
+      id: 'prerequisite-a', topicId: topic.id, title: 'Read offsets', description: '',
+      order: 1, createdAt, updatedAt: createdAt, dependencyIds: [], criteria: [], references: [],
+    }
+    await plans.saveTaskDefinition(task)
+    await plans.saveTaskDefinition({ ...task, id: 'prerequisite-b' })
+    const verify = {
+      ...task, id: 'verify', title: 'Verify offsets', dependencyIds: [task.id],
+      criteria: [{ id: 'criterion', description: 'Compare offsets.', order: 1 }],
+      references: [{ id: 'reference', kind: 'topic' as const, topicId: ingestion.id }],
+    }
+    await plans.saveTaskDefinition(verify)
+    const before = await service.createVersion(topic.id, 'Original Checklist')
+    await plans.saveTaskDefinition({ ...verify, dependencyIds: ['prerequisite-b'] })
+    const afterDependency = await service.createVersion(topic.id, 'Use the other prerequisite')
+    expect(compareTopicVersions(before.snapshot, afterDependency.snapshot).implementation).toMatchObject([
+      { id: verify.id, details: ['Task dependencies'] },
+    ])
+    await plans.saveTaskDefinition({
+      ...verify, dependencyIds: ['prerequisite-b'],
+      criteria: [{ ...verify.criteria[0]!, description: 'Compare source offsets.' }],
+      references: [{ ...verify.references[0]!, topicId: streams.id }],
+    })
+    const afterCriteria = await service.createVersion(topic.id, 'Refine verification')
+    expect(compareTopicVersions(afterDependency.snapshot, afterCriteria.snapshot).implementation).toMatchObject([
+      { id: verify.id, details: ['Acceptance criteria', 'References'] },
+    ])
+  })
+
   it('restores knowledge and links in one write, saves a reversible backup, and preserves project work', async () => {
     const dependency = await depend(topic.id, ingestion.id)
     const related = await service.addRelationship({ sourceTopicId: topic.id, targetTopicId: streams.id, type: 'related' })
@@ -125,15 +198,16 @@ describe('topic version history', () => {
 
     const result = await service.restoreVersion(topic.id, first.id)
     expect(storage.setItem).toHaveBeenCalledTimes(1)
-    expect(result.backup).toMatchObject({ versionNumber: 2, snapshot: { title: 'Changed CDC', content: 'Manual changes' } })
-    expect(result.version).toMatchObject({ versionNumber: 3, restoredFromVersionId: first.id })
-    expect(matchesTopicSnapshot(result.version.snapshot, first.snapshot)).toBe(true)
+    expect(result.backup).toMatchObject({ versionNumber: 3, snapshot: { title: 'Changed CDC', content: 'Manual changes' } })
+    expect(result.version).toMatchObject({ versionNumber: 4, restoredFromVersionId: first.id })
+    expect(matchesTopicSnapshot(result.version.snapshot, { ...first.snapshot, dependents: result.backup.snapshot.dependents })).toBe(true)
+    expect(result.workspace.relationships.find(edge => edge.id === dependency.id)).toMatchObject({ targetTopicId: ingestion.id })
     expect(result.workspace.relationships).toContainEqual(external)
     expect(result.workspace.topics.find(item => item.id === topic.id)).toMatchObject({ id: topic.id, createdAt })
     expect(await plans.list()).toEqual(implementationData)
     expect((await instructions.load(instructionKey)).draft).toEqual(draft)
     const reopened = new TopicService(new LocalStorageTopicRepository(() => storage))
-    expect((await reopened.versions(topic.id)).map(item => item.versionNumber)).toEqual([3, 2, 1])
+    expect((await reopened.versions(topic.id)).map(item => item.versionNumber)).toEqual([4, 3, 2, 1])
     const undo = await reopened.restoreVersion(topic.id, result.backup.id)
     expect(matchesTopicSnapshot(undo.version.snapshot, result.backup.snapshot)).toBe(true)
   })
@@ -189,7 +263,7 @@ describe('topic version history', () => {
     expect(first.versionNumber).toBe(1)
     const { topics, relationships } = await service.readWorkspace()
     expect(topics.map(item => item.id)).toEqual(seed.map(item => item.id))
-    expect(first.snapshot).toEqual(captureTopicSnapshot(topic, topics, relationships))
-    if (version === 5) expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject(stored)
+    expect(first.snapshot).toEqual(captureTopicSnapshot(topic, topics, relationships, { taskDefinitions: [], knowledgeSections: [] }))
+    if (version === 5) expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ ...stored, version: 6 })
   })
 })

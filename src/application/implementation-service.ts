@@ -1,5 +1,8 @@
-﻿import type { ImplementationChanges, ImplementationRepository, TaskChanges } from './implementation-repository'
+import type { AgentConfigChange } from '../domain/project-agent-config'
+import type { SafeguardInput } from '../domain/project-safeguards'
+import type { ImplementationChanges, ImplementationRepository, TaskChanges } from './implementation-repository'
 import { artifactTypes, environments, webUrl, type ArtifactDetails, type ReferenceDetails } from '../domain/implementation'
+import type { TaskDefinition } from '../domain/implementation'
 import type { TaskDetailChange } from './implementation-repository'
 
 function newRecord() {
@@ -46,6 +49,7 @@ function cleanArtifact(input: ArtifactDetails): ArtifactDetails {
   return {
     title: required(input.title, 'Enter an artifact title.'),
     type: input.type,
+    relatedTaskId: input.relatedTaskId || undefined,
     url: optionalUrl(input.url),
     description: input.description?.trim() || undefined,
   }
@@ -58,6 +62,28 @@ export class ImplementationService {
     return this.repository.readImplementations()
   }
 
+  saveTaskDefinition(input: TaskDefinition) {
+    return this.repository.saveTaskDefinition({
+      ...input,
+      title: required(input.title, 'Enter a task name.'),
+      description: input.description.trim(),
+      criteria: input.criteria.map(criterion => ({ ...criterion, description: required(criterion.description, 'Enter an acceptance criterion.') })),
+      references: input.references.map(reference => ({ ...cleanReference(reference), id: reference.id })),
+    })
+  }
+
+  moveTaskDefinition(topicId: string, id: string, destination: -1 | 1 | string) {
+    return this.repository.moveTaskDefinition(topicId, id, destination)
+  }
+
+  deleteTaskDefinition(topicId: string, id: string) {
+    return this.repository.deleteTaskDefinition(topicId, id)
+  }
+
+  upgradeImplementationKnowledge(id: string) {
+    return this.repository.upgradeImplementationKnowledge(id)
+  }
+
   async createProject(name: string, description: string, topicId?: string) {
     const project = { ...newRecord(), ...cleanProject(name, description) }
     await this.repository.createProject(project, topicId === undefined ? undefined : newImplementation(topicId, project.id))
@@ -66,6 +92,18 @@ export class ImplementationService {
 
   async updateProject(id: string, name: string, description: string) {
     await this.repository.updateProject(id, cleanProject(name, description))
+  }
+
+  changeAgentConfig(projectId: string, change: AgentConfigChange) {
+    return this.repository.changeProjectAgentConfig(projectId, change)
+  }
+
+  saveSafeguard(projectId: string, input: SafeguardInput, policyId?: string) {
+    return this.repository.saveProjectPolicy(projectId, input, policyId)
+  }
+
+  deleteSafeguard(projectId: string, policyId: string) {
+    return this.repository.deleteProjectPolicy(projectId, policyId)
   }
 
   deleteProject(id: string) {

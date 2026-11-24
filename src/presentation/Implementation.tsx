@@ -1,27 +1,29 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type Modifier } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, CircleCheck, ClipboardList, Code2, Database, ExternalLink, FileJson, FileText, GitBranch, GripVertical, Link2, Minus, Package, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleAlert, CircleCheck, Code2, Database, Eye, ExternalLink, FileJson, FileText, GripVertical, Link2, Minus, Package, Pause, Pencil, Play, Plus, Trash2, Unlink } from 'lucide-react'
 import type { ImplementationWorkspace, TaskChanges } from '../application/implementation-repository'
 import type { ImplementationService } from '../application/implementation-service'
 import {
-  artifactTypes, environments, implementationStatuses, orderedTasks, taskProgress, taskStatuses, webUrl,
-  type AcceptanceCriterion, type ArtifactDetails, type ArtifactType, type Environment, type ImplementationArtifact,
+  artifactTypes, orderedTasks, taskProgress, taskStatuses, webUrl,
+  type AcceptanceCriterion, type ArtifactDetails, type ArtifactType, type ImplementationArtifact,
   type Project, type ReferenceDetails, type TaskReference,
-  type ImplementationStatus, type ImplementationTask, type TaskStatus, type TopicImplementation,
+  type ImplementationTask, type TaskStatus, type TopicImplementation,
 } from '../domain/implementation'
 import type { Topic } from '../domain/topic'
+import { blockedByPrerequisites } from '../application/project-progress'
 import { Markdown } from './markdown'
-import { topicPath } from './navigation'
+import { MarkdownEditor, MarkdownIndicator } from './MarkdownEditor'
+import { projectPath, topicPath } from './navigation'
 
-const implementationLabels: Record<ImplementationStatus, string> = {
-  not_started: 'Not started', planned: 'Planned', in_progress: 'In progress', blocked: 'Blocked', completed: 'Completed',
+export function numberedTaskLabels(tasks: readonly Pick<ImplementationTask, 'id' | 'title'>[]) {
+  return tasks.map((task, index) => [task.id, `${index + 1}. ${task.title}`] as const)
 }
+
 const taskLabels: Record<TaskStatus, string> = { todo: 'To do', in_progress: 'In progress', blocked: 'Blocked', done: 'Done' }
 const taskIcons = { todo: Minus, in_progress: Play, blocked: Pause, done: Check }
-const environmentLabels: Record<Environment, string> = { development: 'Development', staging: 'Staging', production: 'Production' }
 const artifactLabels: Record<ArtifactType, string> = {
   code: 'Code', documentation: 'Documentation', api_specification: 'API specification',
   collection: 'Collection', database_script: 'Database script', other: 'Other',
@@ -33,48 +35,82 @@ function TaskMark({ status }: { status: TaskStatus }) {
   return <span className={`task-mark task-${status}`} aria-hidden="true"><Icon size={13} /></span>
 }
 
+function TaskBadge({ status, blockedByDependency }: { status: TaskStatus; blockedByDependency: boolean }) {
+  const displayStatus = blockedByDependency ? 'blocked' : status
+  return <span className={`task-badge task-${displayStatus}`}
+    title={blockedByDependency ? 'Waiting for prerequisite tasks' : undefined}>{taskLabels[displayStatus]}</span>
+}
+
 const verticalDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 })
 
-function SortableTaskRow({ task, index, expanded, canReorder, busy, onSelect }: {
+export function useTaskSortRow(id: string, disabled: boolean) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isOver, activeIndex, overIndex } =
+    useSortable({ id, disabled })
+  const dropEdge = isOver && activeIndex >= 0 && activeIndex !== overIndex
+    ? (activeIndex < overIndex ? 'after' : 'before')
+    : undefined
+  return {
+    row: { ref: setNodeRef, 'data-dragging': isDragging || undefined, 'data-drop-edge': dropEdge,
+      style: { transform: CSS.Translate.toString(transform), transition } },
+    grip: { ref: setActivatorNodeRef, ...attributes, ...listeners },
+  }
+}
+
+function SortableTaskRow({ task, blockedByDependency, index, expanded, canReorder, busy, onSelect, onEdit }: {
   task: ImplementationTask
+  blockedByDependency: boolean
   index: number
   expanded: boolean
   canReorder: boolean
   busy: boolean
   onSelect: () => void
+  onEdit: () => void
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isOver, activeIndex, overIndex } =
-    useSortable({ id: task.id, disabled: !canReorder || busy })
-  const dropEdge = isOver && activeIndex >= 0 && activeIndex !== overIndex
-    ? (activeIndex < overIndex ? 'after' : 'before')
-    : undefined
+  const { row, grip } = useTaskSortRow(task.id, !canReorder || busy)
 
-  return <li ref={setNodeRef} className="implementation-task-row" data-dragging={isDragging || undefined} data-drop-edge={dropEdge}
-    style={{ transform: CSS.Translate.toString(transform), transition }}>
-    <button type="button" className="task-grip" ref={setActivatorNodeRef} {...attributes} {...listeners}
+  const statusId = useId()
+  const status = blockedByDependency ? 'blocked' : task.status
+  return <li className="implementation-task-row" {...row}>
+    <button type="button" className="task-grip" {...grip}
       disabled={!canReorder} aria-label={`Reorder ${task.title}`} title={`Reorder ${task.title}`}>
       <GripVertical size={17} aria-hidden="true" />
     </button>
     <button className="implementation-task" type="button" aria-expanded={expanded}
-      aria-controls="implementation-task-details" onClick={onSelect}>
-      <TaskMark status={task.status} />
+      aria-controls="implementation-task-details" aria-describedby={statusId} onClick={onSelect}>
+      <TaskMark status={status} />
       <span className="task-label">
         <span className="task-number">{index + 1}.</span>
-        <span className="task-title">{task.title}</span>
+        <span className="task-title" title={task.title}>{task.title}</span>
       </span>
-      <span className="task-row-status">
-        <span className={`task-badge task-${task.status}`}>{taskLabels[task.status]}</span>
-        <ChevronDown className="task-chevron" size={15} aria-hidden="true" />
-      </span>
+      <ChevronDown className="task-chevron" size={15} aria-hidden="true" />
     </button>
+    <button type="button" className="button icon-button task-row-edit" title="Edit task"
+      aria-label={`Edit task: ${task.title}`} disabled={busy} onClick={onEdit}><Pencil size={16} aria-hidden="true" /></button>
+    <span className="task-row-status" id={statusId}>
+      <TaskBadge status={task.status} blockedByDependency={blockedByDependency} />
+    </span>
   </li>
 }
 
-function SortableTaskList({ tasks, expandedId, busy, onSelect, onReorder }: {
+function SortableTaskList({ tasks, blockedTaskIds, expandedId, busy, onSelect, onEdit, onReorder }: {
   tasks: ImplementationTask[]
+  blockedTaskIds: ReadonlySet<string>
   expandedId?: string
   busy: boolean
   onSelect: (id: string) => void
+  onEdit: (task: ImplementationTask) => void
+  onReorder: (id: string, targetId: string) => void
+}) {
+  return <TaskSortContext tasks={tasks} onReorder={onReorder}>
+    <ol className="implementation-tasks">{tasks.map((task, index) => <SortableTaskRow key={task.id}
+      task={task} blockedByDependency={blockedTaskIds.has(task.id)} index={index} expanded={expandedId === task.id} canReorder={tasks.length > 1} busy={busy}
+      onSelect={() => onSelect(task.id)} onEdit={() => onEdit(task)} />)}</ol>
+  </TaskSortContext>
+}
+
+export function TaskSortContext({ tasks, children, onReorder }: {
+  tasks: readonly Pick<ImplementationTask, 'id' | 'title'>[]
+  children: ReactNode
   onReorder: (id: string, targetId: string) => void
 }) {
   const sensors = useSensors(
@@ -95,11 +131,7 @@ function SortableTaskList({ tasks, expandedId, busy, onSelect, onReorder }: {
     onDragEnd={({ active, over }) => {
       if (over && active.id !== over.id) onReorder(String(active.id), String(over.id))
     }}>
-    <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>
-      <ol className="implementation-tasks">{tasks.map((task, index) => <SortableTaskRow key={task.id}
-        task={task} index={index} expanded={expandedId === task.id} canReorder={tasks.length > 1} busy={busy}
-        onSelect={() => onSelect(task.id)} />)}</ol>
-    </SortableContext>
+    <SortableContext items={tasks.map(task => task.id)} strategy={verticalListSortingStrategy}>{children}</SortableContext>
   </DndContext>
 }
 
@@ -110,26 +142,28 @@ function ImplementationNotice({ message, error = false }: { message: string; err
   </div>
 }
 
-type DialogState = { kind: 'project'; project?: Project } | { kind: 'task'; task?: ImplementationTask } |
+type DialogState = { kind: 'project' } | { kind: 'task'; task?: ImplementationTask } |
   { kind: 'criterion'; taskId: string; criterion?: AcceptanceCriterion } |
   { kind: 'dependency'; taskId: string } |
   { kind: 'reference'; taskId: string; reference?: TaskReference } |
   { kind: 'artifact'; implementationId: string; artifact?: ImplementationArtifact } |
-  { kind: 'confirm'; title: string; message: string; action: () => Promise<void> }
+  { kind: 'confirm'; title: string; message: string; action: () => Promise<void>; submitLabel?: string; status?: string }
 
 function errorMessage(problem: unknown) {
   return problem instanceof Error ? problem.message : 'Could not save changes. Please try again.'
 }
 
-function ImplementationDialog({ title, submitLabel, destructive, children, onClose, onSubmit }: {
+export function ImplementationDialog({ title, submitLabel, destructive, className, children, onClose, onSubmit }: {
   title: string
   submitLabel: string
   destructive?: boolean
+  className?: string
   children: ReactNode
   onClose: () => void
   onSubmit: (fields: FormData) => Promise<void>
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -141,9 +175,9 @@ function ImplementationDialog({ title, submitLabel, destructive, children, onClo
     if (error) dialog.current?.scrollTo({ top: 0 })
   }, [error])
 
-  return <dialog ref={dialog} className="panel delete-dialog implementation-dialog" aria-labelledby="implementation-dialog-title"
+  return <dialog ref={dialog} className={`panel delete-dialog implementation-dialog${className ? ' ' + className : ''}`} aria-labelledby={titleId}
     onClose={onClose} onCancel={event => { if (busy) event.preventDefault() }}>
-    <header className="implementation-dialog-header"><h2 id="implementation-dialog-title">{title}</h2></header>
+    <header className="implementation-dialog-header"><h2 id={titleId}>{title}</h2></header>
     <form onSubmit={async event => {
       event.preventDefault()
       if (busy) return
@@ -178,7 +212,7 @@ function fieldValue(fields: FormData, name: string) {
   return String(fields.get(name) ?? '')
 }
 
-function ReferenceDialog({ topics, reference, onClose, onSave }: {
+export function ReferenceDialog({ topics, reference, onClose, onSave }: {
   topics: readonly Topic[]
   reference?: TaskReference
   onClose: () => void
@@ -215,15 +249,19 @@ function ReferenceDialog({ topics, reference, onClose, onSave }: {
   </ImplementationDialog>
 }
 
-function ArtifactDialog({ artifact, onClose, onSave }: {
+function ArtifactDialog({ artifact, taskGroups, onClose, onSave }: {
   artifact?: ImplementationArtifact
+  taskGroups: { planId: string; topicTitle: string; labels: ReturnType<typeof numberedTaskLabels> }[]
   onClose: () => void
   onSave: (input: ArtifactDetails) => Promise<void>
 }) {
   return <ImplementationDialog title={artifact ? 'Edit artifact' : 'Add artifact'} submitLabel="Save" onClose={onClose} onSubmit={async fields => {
     const type = artifactTypes.find(value => value === fieldValue(fields, 'type'))
     if (!type) throw new Error('Choose an artifact type.')
-    await onSave({ title: fieldValue(fields, 'title'), type, url: fieldValue(fields, 'url'), description: fieldValue(fields, 'description') })
+    await onSave({
+      title: fieldValue(fields, 'title'), type, relatedTaskId: fieldValue(fields, 'relatedTaskId'),
+      url: fieldValue(fields, 'url'), description: fieldValue(fields, 'description'),
+    })
   }}>
     <div className="implementation-form-field">
       <label htmlFor="artifact-title">Title</label>
@@ -233,6 +271,17 @@ function ArtifactDialog({ artifact, onClose, onSave }: {
       <label htmlFor="artifact-type">Type</label>
       <select className="field" id="artifact-type" name="type" defaultValue={artifact?.type ?? 'code'}>
         {artifactTypes.map(type => <option key={type} value={type}>{artifactLabels[type]}</option>)}
+      </select>
+    </div>
+    <div className="implementation-form-field">
+      <label htmlFor="artifact-task">Related Task (optional)</label>
+      <select className="field" id="artifact-task" name="relatedTaskId" defaultValue={artifact?.relatedTaskId ?? ''}>
+        <option value="">No related task</option>
+        {artifact?.relatedTaskId && !taskGroups.some(group => group.labels.some(([id]) => id === artifact.relatedTaskId)) &&
+          <option value={artifact.relatedTaskId}>Unavailable task</option>}
+        {taskGroups.map(({ planId, topicTitle, labels }) => <optgroup key={planId} label={topicTitle}>
+          {labels.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </optgroup>)}
       </select>
     </div>
     <div className="implementation-form-field">
@@ -246,7 +295,7 @@ function ArtifactDialog({ artifact, onClose, onSave }: {
   </ImplementationDialog>
 }
 
-function ResourceLink({ url, title }: { url?: string; title: string }) {
+export function ResourceLink({ url, title }: { url?: string; title: string }) {
   const href = url && webUrl(url)
   return href ? <a className="implementation-resource-link" href={href} target="_blank" rel="noopener noreferrer">
     {title} <ExternalLink size={13} aria-hidden="true" />
@@ -262,7 +311,7 @@ function DetailAction({ label, icon: Icon, onClick, disabled }: {
   return <button type="button" className="button icon-button detail-action" title={label} aria-label={label} disabled={disabled} onClick={onClick}><Icon size={14} /></button>
 }
 
-function ProjectDialog({ project, onClose, onSave }: { project?: Project; onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
+export function ProjectDialog({ project, onClose, onSave }: { project?: Project; onClose: () => void; onSave: (name: string, description: string) => Promise<void> }) {
   const [name, setName] = useState(project?.name ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
   return <ImplementationDialog title={project ? 'Edit project' : 'New project'} submitLabel={project ? 'Save' : 'Create project'}
@@ -282,7 +331,7 @@ function TaskDialog({ task, onClose, onSave }: { task?: ImplementationTask; onCl
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'todo')
-  return <ImplementationDialog title={task ? 'Edit task' : 'New task'} submitLabel={task ? 'Save' : 'Add task'} onClose={onClose}
+  return <ImplementationDialog className="task-editor-dialog" title={task ? 'Edit task' : 'New task'} submitLabel={task ? 'Save' : 'Add task'} onClose={onClose}
     onSubmit={() => onSave({ title, description, status })}>
     <div className="implementation-form-field">
       <label htmlFor="implementation-task-title">Task title</label>
@@ -312,7 +361,7 @@ function DecisionNotes({ implementation, busy, onSave }: {
   const [draft, setDraft] = useState(implementation.notes)
   return <section className="panel implementation-panel">
     <div className="implementation-heading">
-      <h2>Technical decisions</h2>
+      <div className="context-editor-title"><h2>Technical decisions</h2>{editing && <MarkdownIndicator />}</div>
       {!editing && <button className="button" disabled={busy} onClick={() => {
         setDraft(implementation.notes)
         setPreview(false)
@@ -321,12 +370,12 @@ function DecisionNotes({ implementation, busy, onSave }: {
     </div>
     {editing ? <>
       <div className="segmented notes-mode" aria-label="Decision notes editor mode">
-        <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Edit</button>
-        <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>Preview</button>
+        <button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}><Pencil size={15} /> Edit</button>
+        <button type="button" aria-pressed={preview} onClick={() => setPreview(true)}><Eye size={16} /> Preview</button>
       </div>
-      {preview ? <div className="editor-preview">{draft.trim() ? <Markdown content={draft} /> : <p className="muted">No notes to preview.</p>}</div>
-        : <textarea className="markdown-input" aria-label="Technical decision notes" rows={6} value={draft}
-          onChange={event => setDraft(event.target.value)} placeholder="Document technical decisions in Markdown…" />}
+      <MarkdownEditor label="Technical decision notes" placeholder="Document technical decisions in Markdown..." rows={6}
+        hidden={preview} value={draft} onChange={setDraft} />
+      {preview && <div className="editor-preview">{draft.trim() ? <Markdown content={draft} /> : <p className="muted">No notes to preview.</p>}</div>}
       <div className="editor-actions">
         <button className="button" disabled={busy} onClick={() => setEditing(false)}>Cancel</button>
         <button className="button primary" disabled={busy} onClick={async () => { if (await onSave(draft)) setEditing(false) }}>Save</button>
@@ -356,17 +405,27 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
     return () => { active = false }
   }, [service, retry])
 
-  const project = data?.projects.find(item => item.id === query.get('project')) ?? data?.projects[0]
-  const implementation = data?.implementations.find(item => item.topicId === topic.id && item.projectId === project?.id)
+  const topicImplementations = data?.implementations.filter(item => item.topicId === topic.id)
+  const defaultProjectId = topicImplementations?.[0]?.projectId
+  const projects = data?.projects
+  const project = projects?.find(item => item.id === query.get('project')) ?? projects?.find(item => item.id === defaultProjectId)
+  const implementation = topicImplementations?.find(item => item.projectId === project?.id)
   const tasks = implementation
     ? (pendingOrder?.implementationId === implementation.id ? pendingOrder.tasks : orderedTasks(data?.tasks ?? [], implementation.id))
     : []
+  const blockedTaskIds = blockedByPrerequisites(tasks)
   const artifacts = data?.artifacts.filter(item => item.implementationId === implementation?.id) ?? []
-  const selectedTask = tasks.find(task => task.id === taskId) ?? tasks[0]
+  const selectedTask = tasks.find(task => task.id === (taskId ?? query.get('task'))) ?? tasks[0]
   const taskIndex = selectedTask ? tasks.indexOf(selectedTask) : -1
   const progress = taskProgress(tasks)
   const criteria = [...(selectedTask?.criteria ?? [])].sort((a, b) => a.order - b.order)
   const dependencyOptions = tasks.filter(task => task.id !== selectedTask?.id && !selectedTask?.dependencyIds.includes(task.id))
+  const taskLabelsById = new Map(numberedTaskLabels(tasks))
+  const artifactTaskGroups = (data?.implementations ?? []).filter(plan => plan.projectId === project?.id).flatMap(plan => {
+    const labels = numberedTaskLabels(plan.id === implementation?.id ? tasks : orderedTasks(data?.tasks ?? [], plan.id))
+    return labels.length ? [{ planId: plan.id, topicTitle: topics.find(item => item.id === plan.topicId)?.title ?? 'Topic', labels }] : []
+  })
+  const artifactTaskLabels = new Map(artifactTaskGroups.flatMap(group => group.labels))
 
   function confirmRemoval(label: string, action: () => Promise<void>) {
     setDialog({ kind: 'confirm', title: `Delete ${label}?`, message: `This ${label} will be permanently deleted.`, action })
@@ -374,6 +433,7 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
 
   function selectProject(id: string, replace = false) {
     setQuery(params => {
+      params.delete('task')
       if (id) params.set('project', id)
       else params.delete('project')
       return params
@@ -382,23 +442,6 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
     setCollapsed(false)
     setMessage('')
     setError('')
-  }
-
-  async function openProject(id: string) {
-    if (!id || busy) return
-    setBusy(true)
-    setError('')
-    setMessage('')
-    try {
-      const created = await service.createImplementation(topic.id, id)
-      setData(await service.list())
-      selectProject(id)
-      if (created) setMessage('Implementation created.')
-    } catch (problem) {
-      setError(errorMessage(problem))
-    } finally {
-      setBusy(false)
-    }
   }
 
   async function commit(action: () => Promise<void>, status: string) {
@@ -440,46 +483,44 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
     : <p className="placeholder" role="status">Loading implementations…</p>
 
   return <div className="implementation">
-    <div className="implementation-toolbar" role="group" aria-label="Implementation controls">
+    <section className="implementation-toolbar" aria-labelledby="implementation-project-label">
+      <h2 id="implementation-project-label">Project</h2>
       <div className="implementation-project-control">
-        <label><span id="implementation-project-label">Project</span> <select className="field" aria-labelledby="implementation-project-label" disabled={!project || busy} value={implementation?.projectId ?? ''} onChange={event => void openProject(event.target.value)}>
-          {!implementation && <option value="" disabled>{project ? 'Select a project' : 'No projects available'}</option>}
+        <select className="field" aria-labelledby="implementation-project-label" disabled={!data.projects.length || busy}
+          value={project?.id ?? ''} onChange={event => selectProject(event.target.value)}>
+          {!project && <option value="" disabled>{data.projects.length ? 'Select a project' : 'No projects available'}</option>}
           {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select></label>
-        <button type="button" className="button icon-button" aria-label="Edit project" title="Edit project"
-          disabled={!implementation || !project || busy} onClick={() => setDialog({ kind: 'project', project })}><Pencil size={16} /></button>
+        </select>
+        {project && !busy
+          ? <Link className="button icon-button" aria-label="Open project" title="Open project" to={projectPath(project.id)}>
+            <ExternalLink size={16} aria-hidden="true" />
+          </Link>
+          : <button type="button" className="button icon-button" aria-label="Open project" title="Open project" disabled>
+            <ExternalLink size={16} aria-hidden="true" />
+          </button>}
       </div>
-      {implementation && <div className="implementation-progress-controls">
-        <label className="implementation-status"><span id="implementation-status-label">Implementation status</span>
-          <select className="field" aria-labelledby="implementation-status-label" value={implementation.status} disabled={busy} onChange={event => {
-            const status = implementationStatuses.find(value => value === event.target.value)
-            if (status) void run(() => service.updateImplementation(implementation.id, { status }), 'Implementation status saved.')
-          }}>{implementationStatuses.map(status => <option key={status} value={status}>{implementationLabels[status]}</option>)}</select>
-        </label>
-        <button className="button implementation-delete" title="Delete implementation" aria-label="Delete implementation" disabled={busy} onClick={() => setDialog({
-          kind: 'confirm', title: 'Delete implementation?',
-          message: `This implementation for “${project?.name}” and all of its tasks, artifacts, and notes will be permanently deleted.`,
-          action: () => service.deleteImplementation(implementation.id),
-        })}><Trash2 size={17} /></button>
-        </div>}
-      <div className="implementation-controls">
-        <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'project' })}><Plus size={16} /> New project</button>
-        {project && implementation && <button className="button icon-button" disabled={busy} title="Delete project" aria-label="Delete project" onClick={() => setDialog({
-          kind: 'confirm', title: 'Delete project?', message: `“${project.name}” and its implementations, tasks, artifacts, and instruction drafts will be permanently deleted.`,
+      <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'project' })}><Plus size={16} /> New project</button>
+    </section>
+    <section className="implementation-toolbar" aria-labelledby="implementation-controls-heading">
+      <h2 id="implementation-controls-heading">Implementation</h2>
+      {implementation && project ?
+        <button className="button implementation-remove" title="Remove implementation" aria-label="Remove implementation" disabled={busy} onClick={() => setDialog({
+          kind: 'confirm', title: 'Remove implementation?', submitLabel: 'Remove', status: 'Implementation removed.',
+          message: `Remove this topic from "${project.name}"? Its implementation, tasks, artifacts, and notes will be permanently deleted.`,
           action: async () => {
-            await service.deleteProject(project.id)
-            selectProject('', true)
+            await service.deleteImplementation(implementation.id)
+            selectProject(project.id, true)
           },
-        })}><Trash2 size={17} /></button>}
-      </div>
-    </div>
+        })}><Unlink size={17} aria-hidden="true" /> Remove</button>
+      : project ? <>
+        <p className="muted">Not implemented</p>
+        <button className="button primary" disabled={busy} onClick={() => void run(async () => {
+          await service.createImplementation(topic.id, project.id)
+        }, 'Implementation associated.')}>Add</button>
+      </> : <p className="muted">Select or create a project to implement this topic.</p>}
+    </section>
     <ImplementationNotice message={error} error />
     <ImplementationNotice message={message} />
-    {!project && <section className="panel placeholder">
-      <ClipboardList className="purple" size={28} />
-      <h2>Create a project to begin</h2>
-      <p className="muted">Projects keep tasks and technical decisions together.</p>
-    </section>}
     {implementation && <>
       <div className="implementation-grid">
         <section className="panel implementation-panel implementation-plan">
@@ -487,8 +528,8 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
             <button className="button primary" disabled={busy} onClick={() => setDialog({ kind: 'task' })}><Plus size={16} /> Add task</button>
           </div>
           {!tasks.length ? <p className="muted">No tasks yet. Add a task to start planning this implementation.</p>
-            : <SortableTaskList key={implementation.id} tasks={tasks} expandedId={collapsed ? undefined : selectedTask?.id}
-              busy={busy} onReorder={(id, targetId) => void reorderTasks(id, targetId)} onSelect={id => {
+            : <SortableTaskList key={implementation.id} tasks={tasks} blockedTaskIds={blockedTaskIds} expandedId={collapsed ? undefined : selectedTask?.id}
+              busy={busy} onEdit={task => setDialog({ kind: 'task', task })} onReorder={(id, targetId) => void reorderTasks(id, targetId)} onSelect={id => {
                 setCollapsed(selectedTask?.id === id && !collapsed)
                 setTaskId(id)
               }} />}
@@ -512,76 +553,56 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
                 {progress.counts.blocked > 0 && <small className="muted"> ({progress.counts.blocked} blocked)</small>}</span></li>
             </ul>
           </div>
-          <div className="implementation-config">
-            <label htmlFor="implementation-environment">Environment</label>
-            <select id="implementation-environment" className="field" disabled={busy} value={implementation.environment} onChange={event => {
-              const environment = environments.find(value => value === event.target.value)
-              if (environment) void run(() => service.updateImplementation(implementation.id, { environment }), 'Environment saved.')
-            }}>{environments.map(environment => <option key={environment} value={environment}>{environmentLabels[environment]}</option>)}</select>
-            <label htmlFor="implementation-branch">Branch</label>
-            <form className="implementation-branch" key={JSON.stringify([implementation.id, implementation.branch])} onSubmit={event => {
-              event.preventDefault()
-              const branch = fieldValue(new FormData(event.currentTarget), 'branch')
-              void run(() => service.updateImplementation(implementation.id, { branch }), 'Branch saved.')
-            }}>
-              <div className="field branch-field"><GitBranch size={16} aria-hidden="true" />
-                <input id="implementation-branch" name="branch" disabled={busy} defaultValue={implementation.branch} placeholder="Branch name" />
-              </div>
-              <button type="submit" className="button icon-button detail-action" disabled={busy} title="Save" aria-label="Save"><Check size={15} /></button>
-            </form>
-          </div>
         </section>
         <section className="panel implementation-panel implementation-details">
           <div className="implementation-heading"><h2>Task details</h2>
-            {!collapsed && selectedTask && selectedTask.status !== 'done' && <button className="button mark-done" disabled={busy} onClick={() => void run(() => service.updateTask(selectedTask.id, {
-              title: selectedTask.title, description: selectedTask.description, status: 'done',
-            }), 'Task completed.')}><Check size={16} /> Mark as completed</button>}
+            {!collapsed && selectedTask && <div className="task-action-group">
+              {selectedTask.status !== 'done' && <button className="button mark-done" disabled={busy} onClick={() => void run(() => service.updateTask(selectedTask.id, {
+                title: selectedTask.title, description: selectedTask.description, status: 'done',
+              }), 'Task completed.')}><Check size={16} /> Mark as completed</button>}
+              <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'task', task: selectedTask })}><Pencil size={15} aria-hidden="true" /> Edit</button>
+              <button className="button icon-button task-delete" aria-label="Delete task" title="Delete task" disabled={busy} onClick={() => setDialog({
+                kind: 'confirm', title: 'Delete task?', message: `“${selectedTask.title}” will be permanently deleted.`,
+                action: () => service.deleteTask(selectedTask.id),
+              })}><Trash2 size={16} aria-hidden="true" /></button>
+            </div>}
           </div>
           <div id="implementation-task-details" hidden={collapsed || !selectedTask}>
           {selectedTask && <>
             <div className="task-detail-summary">
               <h3 className="task-detail-title"><Code2 className="purple" size={19} /> {selectedTask.title}</h3>
-              <span className={`task-badge task-${selectedTask.status}`}>{taskLabels[selectedTask.status]}</span>
+              <TaskBadge status={selectedTask.status} blockedByDependency={blockedTaskIds.has(selectedTask.id)} />
             </div>
             <p className={`task-description${selectedTask.description ? '' : ' muted'}`}>{selectedTask.description || 'No task description.'}</p>
             <div className="task-context">
-              <section>
+              <section className="task-criteria">
                 <h4>Acceptance criteria</h4>
-                {!!criteria.length && <ul className="implementation-detail-list">{criteria.map((criterion, index) => <li key={criterion.id} className="implementation-detail-row">
+                {!!criteria.length && <ul className="implementation-detail-list">{criteria.map(criterion => <li key={criterion.id} className="implementation-detail-row">
                   <label className="criterion-label"><input type="checkbox" checked={criterion.completed} disabled={busy} onChange={event => {
                     const completed = event.target.checked
                     void run(() => service.updateCriterion(selectedTask.id, criterion.id, { completed }), 'Criterion saved.')
                   }} /> <span>{criterion.description}</span></label>
                   <div className="implementation-detail-actions">
-                    <DetailAction label="Move criterion up" icon={ArrowUp} disabled={busy || index === 0}
-                      onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'moveCriterion', id: criterion.id, direction: -1 }), 'Criterion moved.')} />
-                    <DetailAction label="Move criterion down" icon={ArrowDown} disabled={busy || index === criteria.length - 1}
-                      onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'moveCriterion', id: criterion.id, direction: 1 }), 'Criterion moved.')} />
                     <DetailAction label="Edit criterion" icon={Pencil} disabled={busy} onClick={() => setDialog({ kind: 'criterion', taskId: selectedTask.id, criterion })} />
                     <DetailAction label="Delete criterion" icon={Trash2} disabled={busy}
                       onClick={() => confirmRemoval('criterion', () => service.changeTaskDetails(selectedTask.id, { kind: 'removeCriterion', id: criterion.id }))} />
                   </div>
                 </li>)}</ul>}
-                <button type="button" className="button detail-add" disabled={busy} onClick={() => setDialog({ kind: 'criterion', taskId: selectedTask.id })}><Plus size={14} /> Add criterion</button>
               </section>
-              <div>
-                <section>
+                {!!selectedTask.dependencyIds.length && <section>
                   <h4>Dependencies</h4>
-                  {!!selectedTask.dependencyIds.length && <ul className="implementation-detail-list">{tasks.filter(task => selectedTask.dependencyIds.includes(task.id)).map(task => <li key={task.id} className="implementation-detail-row">
+                  <ul className="implementation-detail-list">{tasks.filter(task => selectedTask.dependencyIds.includes(task.id)).map(task => <li key={task.id} className="implementation-detail-row">
                     <button type="button" className="implementation-resource-link" disabled={busy} onClick={() => {
                       setTaskId(task.id)
                       setCollapsed(false)
-                    }}><Link2 size={14} aria-hidden="true" /> {task.title}</button>
+                    }}><Link2 size={14} aria-hidden="true" /> {taskLabelsById.get(task.id)}</button>
                     <DetailAction label="Remove dependency" icon={Trash2} disabled={busy}
                       onClick={() => void run(() => service.changeTaskDetails(selectedTask.id, { kind: 'removeDependency', id: task.id }), 'Dependency removed.')} />
-                  </li>)}</ul>}
-                  <button type="button" className="button detail-add" disabled={busy || !dependencyOptions.length}
-                    title={dependencyOptions.length ? undefined : 'No other tasks available'}
-                    onClick={() => setDialog({ kind: 'dependency', taskId: selectedTask.id })}><Plus size={14} /> Add dependency</button>
-                </section>
-                <section>
+                  </li>)}</ul>
+                </section>}
+                {!!selectedTask.references.length && <section>
                   <h4>References</h4>
-                  {!!selectedTask.references.length && <ul className="implementation-detail-list">{selectedTask.references.map(reference => <li key={reference.id} className="implementation-detail-row">
+                  <ul className="implementation-detail-list">{selectedTask.references.map(reference => <li key={reference.id} className="implementation-detail-row">
                     {reference.kind === 'topic'
                       ? <Link className="implementation-resource-link" to={topicPath(reference.topicId)}>{topics.find(item => item.id === reference.topicId)?.title ?? 'Referenced topic'}</Link>
                       : <ResourceLink url={reference.url} title={reference.title} />}
@@ -590,22 +611,24 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
                       <DetailAction label="Delete reference" icon={Trash2} disabled={busy}
                         onClick={() => confirmRemoval('reference', () => service.changeTaskDetails(selectedTask.id, { kind: 'removeReference', id: reference.id }))} />
                     </div>
-                  </li>)}</ul>}
-                  <button type="button" className="button detail-add" disabled={busy} onClick={() => setDialog({ kind: 'reference', taskId: selectedTask.id })}><Plus size={14} /> Add reference</button>
-                </section>
+                  </li>)}</ul>
+                </section>}
+            </div>
+            <footer className="task-controls">
+              <div className="task-action-group">
+                <button type="button" className="button" disabled={busy} onClick={() => setDialog({ kind: 'criterion', taskId: selectedTask.id })}><Plus size={14} /> Add criterion</button>
+                <button type="button" className="button" disabled={busy || !dependencyOptions.length}
+                  title={dependencyOptions.length ? undefined : 'No other tasks available'}
+                  onClick={() => setDialog({ kind: 'dependency', taskId: selectedTask.id })}><Plus size={14} /> Add dependency</button>
+                <button type="button" className="button" disabled={busy} onClick={() => setDialog({ kind: 'reference', taskId: selectedTask.id })}><Plus size={14} /> Add reference</button>
               </div>
-            </div>
-            <div className="task-controls">
-              <button className="button" disabled={busy} onClick={() => setDialog({ kind: 'task', task: selectedTask })}><Pencil size={15} /> Edit task</button>
-              <button className="button icon-button" aria-label="Move task up" title="Move task up" disabled={busy || taskIndex === 0}
-                onClick={() => { const target = tasks[taskIndex - 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowUp size={17} /></button>
-              <button className="button icon-button" aria-label="Move task down" title="Move task down" disabled={busy || taskIndex === tasks.length - 1}
-                onClick={() => { const target = tasks[taskIndex + 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowDown size={17} /></button>
-              <button className="button icon-button task-delete" aria-label="Delete task" title="Delete task" disabled={busy} onClick={() => setDialog({
-                kind: 'confirm', title: 'Delete task?', message: `“${selectedTask.title}” will be permanently deleted.`,
-                action: () => service.deleteTask(selectedTask.id),
-              })}><Trash2 size={16} /></button>
-            </div>
+              <div className="task-action-group">
+                <button className="button icon-button" aria-label="Move task up" title="Move task up" disabled={busy || taskIndex === 0}
+                  onClick={() => { const target = tasks[taskIndex - 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowUp size={17} /></button>
+                <button className="button icon-button" aria-label="Move task down" title="Move task down" disabled={busy || taskIndex === tasks.length - 1}
+                  onClick={() => { const target = tasks[taskIndex + 1]; if (target) void reorderTasks(selectedTask.id, target.id) }}><ArrowDown size={17} /></button>
+              </div>
+            </footer>
           </>}
           </div>
           {(collapsed || !selectedTask) && <p className="muted">{tasks.length ? 'Select a task to view its details.' : 'Task details appear here after you add a task.'}</p>}
@@ -614,11 +637,13 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
           <h2 id="implementation-artifacts-title">Artifacts and resources</h2>
           {artifacts.length ? <ul className="implementation-detail-list artifact-list">{artifacts.map(artifact => {
             const Icon = artifactIcons[artifact.type]
+            const relatedTask = artifact.relatedTaskId && artifactTaskLabels.get(artifact.relatedTaskId)
             return <li key={artifact.id} className="implementation-detail-row">
               <Icon className="purple" size={17} aria-hidden="true" />
               <div className="artifact-details">
                 <ResourceLink url={artifact.url} title={artifact.title} />
                 <small className="muted">{artifactLabels[artifact.type]}</small>
+                {relatedTask && <small className="muted">Related Task: {relatedTask}</small>}
                 {artifact.description && <p>{artifact.description}</p>}
               </div>
               <div className="implementation-detail-actions">
@@ -633,14 +658,11 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
       <DecisionNotes key={implementation.id} implementation={implementation} busy={busy}
           onSave={notes => run(() => service.updateImplementation(implementation.id, { notes }), 'Technical decisions saved.')} />
     </>}
-    {dialog?.kind === 'project' && <ProjectDialog project={dialog.project} onClose={() => setDialog(undefined)}
+    {dialog?.kind === 'project' && <ProjectDialog onClose={() => setDialog(undefined)}
       onSave={(name, description) => commit(async () => {
-        if (dialog.project) await service.updateProject(dialog.project.id, name, description)
-        else {
-          const created = await service.createProject(name, description, topic.id)
-          selectProject(created.id)
-        }
-      }, dialog.project ? 'Project updated.' : 'Project and implementation created.')} />}
+        const created = await service.createProject(name, description, topic.id)
+        selectProject(created.id)
+      }, 'Project and implementation created.')} />}
     {dialog?.kind === 'task' && implementation && <TaskDialog task={dialog.task} onClose={() => setDialog(undefined)} onSave={changes => commit(async () => {
       if (dialog.task) await service.updateTask(dialog.task.id, changes)
       else {
@@ -666,15 +688,15 @@ export function Implementation({ topic, topics, service }: { topic: Topic; topic
         <label htmlFor="dependency-task">Depends on</label>
         <select className="field" id="dependency-task" name="task" autoFocus required defaultValue="">
           <option value="" disabled>Select a task</option>
-          {dependencyOptions.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
+          {dependencyOptions.map(task => <option key={task.id} value={task.id}>{taskLabelsById.get(task.id)}</option>)}
         </select>
       </div>
     </ImplementationDialog>}
     {dialog?.kind === 'reference' && <ReferenceDialog topics={topics} reference={dialog.reference} onClose={() => setDialog(undefined)}
       onSave={input => commit(() => service.saveReference(dialog.taskId, input, dialog.reference?.id), 'Reference saved.')} />}
-    {dialog?.kind === 'artifact' && <ArtifactDialog artifact={dialog.artifact} onClose={() => setDialog(undefined)}
+    {dialog?.kind === 'artifact' && <ArtifactDialog artifact={dialog.artifact} taskGroups={artifactTaskGroups} onClose={() => setDialog(undefined)}
       onSave={input => commit(() => service.saveArtifact(dialog.implementationId, input, dialog.artifact?.id), 'Artifact saved.')} />}
-    {dialog?.kind === 'confirm' && <ImplementationDialog title={dialog.title} submitLabel="Delete" destructive
-      onClose={() => setDialog(undefined)} onSubmit={() => commit(dialog.action, 'Deleted.')}><p>{dialog.message}</p></ImplementationDialog>}
+    {dialog?.kind === 'confirm' && <ImplementationDialog title={dialog.title} submitLabel={dialog.submitLabel ?? 'Delete'} destructive
+      onClose={() => setDialog(undefined)} onSubmit={() => commit(dialog.action, dialog.status ?? 'Deleted.')}><p>{dialog.message}</p></ImplementationDialog>}
   </div>
 }

@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowLeftRight, CalendarDays, Download, Eye, GitCompareArrows, History, Plus, UserRound } from 'lucide-react'
-import { compareTopicVersions, type ChangeKind, type ContentChange, type TopicVersionComparison } from '../application/compare-topic-versions'
+import { technicalDomainsFor, typedCustomProperty } from '../domain/topic-metadata'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeftRight, CalendarDays, Eye, GitCompareArrows, History, Plus, UserRound } from 'lucide-react'
+import { compareTopicVersions, hasTopicVersionChanges, type ChangeKind, type ContentChange, type TopicVersionComparison } from '../application/compare-topic-versions'
 import type { TopicWorkspace } from '../application/topic-repository'
 import type { TopicService } from '../application/topic-service'
 import type { Topic } from '../domain/topic'
-import { captureTopicSnapshot, matchesTopicSnapshot, type TopicVersion, type VersionRelationship } from '../domain/topic-version'
-import { downloadMarkdown } from './download-markdown'
+import type { TopicSnapshot, TopicVersion, VersionRelationship } from '../domain/topic-version'
+import { ContextActions } from './TopicActions'
 import { Markdown } from './markdown'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 const changeLabels: Record<ChangeKind, string> = { added: 'Added', removed: 'Removed', modified: 'Modified' }
+const versionActions = [{ id: 'view', label: 'View', Icon: Eye }, { id: 'restore', label: 'Restore', Icon: History }] as const
 
 function versionLabel(version: TopicVersion) {
   return `v${version.versionNumber}`
@@ -34,19 +36,48 @@ function VersionLinks({ title, links }: { title: string; links: readonly Version
   </section>
 }
 
+function checklistMarkdown(snapshot: TopicSnapshot) {
+  const titles = new Map(snapshot.taskDefinitions?.map(task => [task.id, task.title]))
+  return snapshot.taskDefinitions?.map((task, index) => [
+    `### ${index + 1}. ${task.title}`,
+    task.description,
+    task.dependencyIds.length && 'Depends on: ' + task.dependencyIds.map(id => titles.get(id) ?? id).join(', '),
+    task.criteria.length && 'Acceptance criteria\n\n' + [...task.criteria].sort((a, b) => a.order - b.order)
+      .map(criterion => '- ' + criterion.description).join('\n'),
+    task.references.length && 'References\n\n' + task.references.map(reference =>
+      '- ' + (reference.kind === 'topic' ? reference.topicId : reference.title + (reference.url ? ' — ' + reference.url : ''))).join('\n'),
+  ].filter(Boolean).join('\n\n')).join('\n\n')
+}
+
 function SnapshotDetails({ version, id }: { version: TopicVersion; id: string }) {
-  const { title, description, content, metadata, dependencies, related } = version.snapshot
+  const { title, type, description, content, metadata, dependencies, related, dependents, taskDefinitions, knowledgeSections } = version.snapshot
+  const domains = technicalDomainsFor(metadata.details)
   return <div className="version-snapshot" id={id}>
     <h4>{title}</h4>
     {description && <p>{description}</p>}
     <dl className="version-metadata">
+      <div><dt>Topic type</dt><dd>{type ?? 'Not recorded'}</dd></div>
       {metadata.source && <div><dt>Source</dt><dd>{metadata.source.title}</dd></div>}
+      {domains.length > 0 && <div><dt>Technical domains</dt><dd>{domains.join(', ')}</dd></div>}
+      {metadata.details?.tags.length ? <div><dt>Tags</dt><dd>{metadata.details.tags.join(', ')}</dd></div> : null}
+      {metadata.details?.customProperties.map(property => {
+        const { id, key, type, value } = typedCustomProperty(property)
+        return <div key={id}><dt>{key} <span className="muted">({type})</span></dt><dd>{String(value)}</dd></div>
+      })}
     </dl>
+    {!metadata.details && <p className="muted">Classification metadata was not recorded in this snapshot.</p>}
     <div className="version-snapshot-links">
       <VersionLinks title="Direct dependencies" links={dependencies} />
+      {dependents?.length ? <VersionLinks title="Required by" links={dependents} /> : null}
       <VersionLinks title="Related topics" links={related} />
     </div>
     {content.trim() && <details className="version-content"><summary>Topic content and standards</summary><Markdown content={content} /></details>}
+    {knowledgeSections?.map(section => <details key={section.id} className="version-content">
+      <summary>{section.title}</summary><Markdown content={section.content} />
+    </details>)}
+    {taskDefinitions && <details className="version-content"><summary>Checklist ({taskDefinitions.length})</summary>
+      {taskDefinitions.length ? <Markdown content={checklistMarkdown(version.snapshot) ?? ''} /> : <p>No tasks recorded.</p>}
+    </details>}
   </div>
 }
 
@@ -82,40 +113,55 @@ function VersionComparison({ comparison }: { comparison: { from: TopicVersion; t
   const { from, to, changes } = comparison
   return <section className="panel version-comparison" aria-labelledby="version-comparison-title">
     <h2 id="version-comparison-title">{versionLabel(from)} → {versionLabel(to)}</h2>
-    {Object.values(changes).every(items => !items.length) && <p className="muted">These snapshots contain the same topic knowledge.</p>}
-    {([{ title: 'Topic fields', fields: changes.fields }, { title: 'Metadata', fields: changes.metadata }]).map(({ title, fields }) =>
+    {!hasTopicVersionChanges(changes) && <p className="muted">These snapshots contain the same topic knowledge.</p>}
+    {([{ title: 'Topic fields', fields: changes.fields }, { title: 'Metadata', fields: changes.metadata },
+      { title: 'Checklist', fields: changes.implementation }, { title: 'Knowledge sections and standards', fields: changes.standards }]).map(({ title, fields }) =>
       fields.length > 0 && <section className="version-diff-section" key={title}><h3>{title}</h3>
-        <ul>{fields.map(field => <li key={field.label}><strong>{field.label}</strong>
+        <ul>{fields.map(field => <li key={'id' in field ? String(field.id) : field.label}><strong>{field.label}</strong>
           <DiffValues before={field.before ?? 'None'} after={field.after ?? 'None'} />
         </li>)}</ul>
       </section>,
     )}
     <ContentChanges changes={changes.content} />
     <LinkChanges title="Direct dependencies" changes={changes.dependencies} />
+    <LinkChanges title="Required by" changes={changes.dependents} />
     <LinkChanges title="Related topics" changes={changes.related} />
   </section>
 }
 
-function exportSnapshot(version: TopicVersion) {
-  const { title, description, content, metadata, dependencies, related } = version.snapshot
-  const relations = (heading: string, links: readonly VersionRelationship[]) => links.length
-    ? [heading, links.map(link => `- ${link.title}${link.description ? ` — ${link.description}` : ''}`).join('\n')] : []
-  const document = [
-    `# ${title} — ${versionLabel(version)}`,
-    `Change summary: ${version.summary}\n\nAuthor: ${version.author}\n\nCreated: ${version.createdAt}`,
-    description,
-    ['## Metadata',
-      metadata.source && `- Source: ${metadata.source.title}`].filter(Boolean).join('\n'),
-    ...relations('## Direct dependencies', dependencies),
-    ...relations('## Related topics', related),
-    content,
-  ].filter(Boolean).join('\n\n') + '\n'
-  const slug = title.toLowerCase().replace(/[^\p{Letter}\p{Number}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 100)
-  downloadMarkdown(document, `${slug || 'topic'}-${versionLabel(version)}.md`)
+function DetectedChanges({ changes }: { changes?: TopicVersionComparison }) {
+  if (!changes) return <p className="muted">An initial knowledge snapshot will be created.</p>
+  if (!hasTopicVersionChanges(changes)) return <p className="muted">No meaningful changes since the latest saved version.</p>
+
+  const changeKind = (before?: string, after?: string): ChangeKind => before === undefined ? 'added' : after === undefined ? 'removed' : 'modified'
+  const describeFields = (fields: { label: string; before?: string; after?: string; details?: string[] }[]) =>
+    fields.map(field => ({ label: field.label, kind: changeKind(field.before, field.after), details: field.details }))
+  const describeLinks = (links: TopicVersionComparison['dependencies']) =>
+    links.map(link => ({ label: (link.after ?? link.before)!.title, kind: link.kind }))
+  const categories: { label: string; items: { label: string; kind: ChangeKind; details?: string[] }[] }[] = [
+    { label: 'Topic details', items: describeFields(changes.fields) },
+    { label: 'Context', items: [...new Set(changes.content.map(change => change.kind))].map(kind => ({ label: 'Content', kind })) },
+    { label: 'Dependencies', items: describeLinks(changes.dependencies) },
+    { label: 'Required by', items: describeLinks(changes.dependents) },
+    { label: 'Related topics', items: describeLinks(changes.related) },
+    { label: 'Standards and knowledge sections', items: describeFields(changes.standards) },
+    { label: 'Checklist', items: describeFields(changes.implementation) },
+    { label: 'Metadata', items: describeFields(changes.metadata) },
+  ]
+  const groups = categories.filter(group => group.items.length)
+  return <div className="version-detected-list">{groups.map(group => <div key={group.label}>
+    <h4>{group.label}</h4>
+    <ul>{group.items.map((item, index) => <li key={index}>
+      <span className={`version-change-tag is-${item.kind}`}>{changeLabels[item.kind]}</span>
+      {item.label}{item.details?.length ? ` · ${item.details.join(', ')}` : ''}
+    </li>)}</ul>
+  </div>)}</div>
 }
 
-function VersionDialog({ restore, hasOpenEditor, onClose, onSubmit }: {
+function VersionDialog({ restore, latest, changes, hasOpenEditor, onClose, onSubmit }: {
   restore?: TopicVersion
+  latest?: TopicVersion
+  changes?: TopicVersionComparison
   hasOpenEditor: boolean
   onClose: () => void
   onSubmit: (summary: string) => Promise<void>
@@ -124,14 +170,19 @@ function VersionDialog({ restore, hasOpenEditor, onClose, onSubmit }: {
   const [summary, setSummary] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const noChanges = !restore && Boolean(latest) && (!changes || !hasTopicVersionChanges(changes))
+  const needsSummary = !restore && !summary.trim()
+  const disabledReason = noChanges ? 'No meaningful changes since the latest saved version.' :
+    needsSummary ? 'Enter a change summary to create this version.' : undefined
+  const next = (latest?.versionNumber ?? 0) + 1
   useEffect(() => { dialog.current?.showModal() }, [])
 
-  return <dialog ref={dialog} className="panel delete-dialog version-dialog" aria-labelledby="version-dialog-title"
+  return <dialog ref={dialog} className={`panel delete-dialog version-dialog${restore ? '' : ' version-create-dialog'}`} aria-labelledby="version-dialog-title"
     onClose={onClose} onCancel={event => { if (busy) event.preventDefault() }}>
     <h2 id="version-dialog-title">{restore ? `Restore ${versionLabel(restore)}?` : 'Create version'}</h2>
     <form onSubmit={async event => {
       event.preventDefault()
-      if (busy) return
+      if (busy || disabledReason) return
       setBusy(true)
       setError('')
       try {
@@ -145,30 +196,48 @@ function VersionDialog({ restore, hasOpenEditor, onClose, onSubmit }: {
       }
     }}>
       <fieldset disabled={busy}>
-        {restore ? <p>This replaces the current title, description, content and standards, topic metadata, direct dependencies, and related topics.
+        {restore ? <p>This restores the saved Topic classification, summary, content, standards, Checklist, metadata, direct dependencies, and related topics where captured.
           The current state is saved as a new version first. Project implementations and instruction drafts are preserved.</p>
-          : <label className="version-field">Change summary
-            <textarea className="field" required rows={4} value={summary} onChange={event => setSummary(event.target.value)} autoFocus />
-          </label>}
+          : <div className="version-create-fields">
+            <dl className="version-metadata">
+              <div><dt>Previous version</dt><dd>{latest ? versionLabel(latest) : 'No previous version'}</dd></div>
+              <div><dt>New version</dt><dd>v{next}</dd></div>
+            </dl>
+            <label className="version-field">Change summary
+              <textarea className="field" required rows={4} value={summary} onChange={event => setSummary(event.target.value)} autoFocus={!noChanges} />
+            </label>
+            <section aria-labelledby="version-detected-title">
+              <h3 id="version-detected-title">Changes detected</h3>
+              <DetectedChanges changes={changes} />
+            </section>
+            <p className="muted">This version creates an immutable snapshot of the current knowledge. Existing projects will not be affected.</p>
+          </div>}
         {restore && hasOpenEditor && <p>Restoring also discards unsaved changes in the open Content editor.</p>}
+        {restore && changes && hasTopicVersionChanges(changes) && <p className="version-restore-warning">
+          The Working version has unversioned changes. A backup version will preserve them before restoration.
+        </p>}
         {error && <p className="error" role="alert">{error}</p>}
+        {disabledReason && <p id="version-create-disabled" className={noChanges ? 'sr-only' : 'muted'}>{disabledReason}</p>}
         <div className="editor-actions">
-          <button type="button" className="button" autoFocus={Boolean(restore)} onClick={() => dialog.current?.close()}>Cancel</button>
-          <button type="submit" className="button primary">{busy ? 'Saving…' : restore ? 'Restore version' : 'Create version'}</button>
+          <button type="button" className="button" autoFocus={Boolean(restore) || noChanges} onClick={() => dialog.current?.close()}>Cancel</button>
+          <button type="submit" className="button primary" disabled={busy || Boolean(disabledReason)}
+            aria-busy={busy || undefined} aria-describedby={disabledReason ? 'version-create-disabled' : undefined}>
+            {busy ? (restore ? 'Restoring…' : 'Creating…') : restore ? 'Restore version' : 'Create'}
+          </button>
         </div>
       </fieldset>
     </form>
   </dialog>
 }
 
-export function VersionHistory({ topic, workspace, service, hasOpenEditor, onRestored }: {
+export function VersionHistory({ topic, service, hasOpenEditor, onRestored }: {
   topic: Topic
-  workspace: TopicWorkspace
   service: TopicService
   hasOpenEditor: boolean
   onRestored: (workspace: TopicWorkspace) => void
 }) {
   const [versions, setVersions] = useState<TopicVersion[]>()
+  const [working, setWorking] = useState<{ snapshot: TopicSnapshot; updatedAt: string }>()
   const [selectedId, setSelectedId] = useState<string>()
   const [fromId, setFromId] = useState<string>()
   const [toId, setToId] = useState<string>()
@@ -181,17 +250,30 @@ export function VersionHistory({ topic, workspace, service, hasOpenEditor, onRes
 
   useEffect(() => {
     let active = true
-    service.versions(topic.id).then(items => { if (active) setVersions(items) }, problem => {
+    service.workingVersion(topic.id).then(({ versions: items, snapshot, updatedAt }) => {
+      if (!active) return
+      setVersions(items)
+      setWorking({ snapshot, updatedAt })
+    }, problem => {
       if (active) setError(errorMessage(problem))
     })
     return () => { active = false }
-  }, [topic.id, service, attempt])
+  }, [topic.id, topic.updatedAt, service, attempt])
   const latest = versions?.[0]
-  const selected = versions?.find(version => version.id === selectedId) ?? latest
+  const selected = versions?.find(version => version.id === selectedId)
   const from = versions?.find(version => version.id === fromId) ?? versions?.[1]
   const to = versions?.find(version => version.id === toId) ?? latest
-  const live = captureTopicSnapshot(topic, workspace.topics, workspace.relationships)
-  const current = versions?.find(version => matchesTopicSnapshot(version.snapshot, live))
+  const detected = useMemo(() => latest && working ? compareTopicVersions(latest.snapshot, working.snapshot) : undefined, [latest, working])
+  const current = detected && !hasTopicVersionChanges(detected) ? latest : undefined
+  const restoreReason = !working ? 'Version history must load before restoring.'
+    : !selected ? 'Select a saved version to restore.'
+    : !hasTopicVersionChanges(compareTopicVersions(selected.snapshot, working.snapshot)) ? 'The selected version already matches the Working version.'
+    : undefined
+
+  function restoreSelection(version: TopicVersion) {
+    setSelectedId(version.id)
+    if (working && hasTopicVersionChanges(compareTopicVersions(version.snapshot, working.snapshot))) setDialog(version)
+  }
 
   function compare(from: TopicVersion, to: TopicVersion) {
     setFromId(from.id)
@@ -204,11 +286,13 @@ export function VersionHistory({ topic, workspace, service, hasOpenEditor, onRes
     if (!dialog) return
     if (dialog === 'create') {
       const created = await service.createVersion(topic.id, summary)
+      setWorking(previous => previous && { ...previous, snapshot: created.snapshot })
       setVersions(previous => [created, ...(previous ?? [])])
       setSelectedId(created.id)
       setMessage(`${versionLabel(created)} created.`)
     } else {
       const { workspace, version, backup } = await service.restoreVersion(topic.id, dialog.id)
+      setWorking({ snapshot: version.snapshot, updatedAt: version.createdAt })
       onRestored(workspace)
       setVersions(previous => [version, backup, ...(previous ?? [])])
       setSelectedId(version.id)
@@ -229,15 +313,22 @@ export function VersionHistory({ topic, workspace, service, hasOpenEditor, onRes
             const isCurrent = current?.id === version.id
             const detailsId = `snapshot-${version.id}`
             return <li key={version.id} className="version-entry" data-current={isCurrent || undefined} data-selected={isSelected || undefined}>
-              <div className="version-entry-info">
-                <h3>{versionLabel(version)} {isCurrent ? <span className="version-pill is-current">Current</span>
+              <div className="version-entry-info" onClick={() => setSelectedId(version.id)}>
+                <h3><button type="button" className="version-select" aria-label={`Select ${versionLabel(version)}`}
+                  aria-pressed={isSelected} aria-controls={isSelected ? detailsId : undefined}>
+                  {versionLabel(version)}
+                </button> {isCurrent ? <span className="version-pill is-current">Current</span>
                   : latest?.id === version.id && <span className="version-pill">Latest</span>}</h3>
                 <VersionAttribution version={version} />
                 <p>{version.summary}</p>
               </div>
               <div className="version-entry-actions">
-                <button className="button" aria-expanded={isSelected} aria-controls={isSelected ? detailsId : undefined}
-                  aria-label={`View ${versionLabel(version)}`} onClick={() => setSelectedId(version.id)}><Eye size={15} /> View</button>
+                <ContextActions title={versionLabel(version)} buttonTitle="Version actions"
+                  entries={versionActions.map(entry => ({ ...entry, disabled: entry.id === 'restore' && isCurrent }))}
+                  onAction={action => {
+                    if (action === 'restore') restoreSelection(version)
+                    else setSelectedId(version.id)
+                  }} />
                 {versions.length >= 2 && <button className="button" aria-label={`Compare ${versionLabel(version)}`} onClick={() => {
                   if (latest && latest.id !== version.id) compare(version, latest)
                   else if (versions[1]) compare(versions[1], version)
@@ -273,25 +364,28 @@ export function VersionHistory({ topic, workspace, service, hasOpenEditor, onRes
         {versions && versions.length < 2 && <p className="muted">Save at least two versions to compare them.</p>}
       </section>
       <section className="panel" aria-labelledby="version-current-title">
-        <h2 id="version-current-title">Current version</h2>
-        {current ? <><strong className="green">{versionLabel(current)}</strong><VersionAttribution version={current} /></>
-          : <p className="muted">{latest ? `The current topic differs from the saved versions. Latest saved version: ${versionLabel(latest)}.`
-            : 'The current topic has no saved version.'}</p>}
+        <h2 id="version-current-title">Working version</h2>
+        {working && <dl className="version-metadata">
+          <div><dt>Status</dt><dd className={current ? 'green' : 'muted'}>
+            {current ? 'Matches the latest saved version.' : latest ? 'Contains unversioned changes.' : 'No saved versions.'}
+          </dd></div>
+          {latest && <div><dt>Latest saved version</dt><dd>{versionLabel(latest)}</dd></div>}
+          <div><dt>Last modified</dt><dd><time dateTime={working.updatedAt}>{dateFormat.format(new Date(working.updatedAt))}</time></dd></div>
+        </dl>}
       </section>
       <section className="panel" aria-labelledby="version-actions-title">
         <h2 id="version-actions-title">Actions</h2>
         <button className="button version-full-button" disabled={!versions} onClick={() => setDialog('create')}><Plus size={17} /> Create version</button>
-        <button className="button version-full-button" disabled={!selected || selected.id === current?.id} onClick={() => { if (selected) setDialog(selected) }}>
-          <History size={17} /> Restore selected version
+        <button className="button version-full-button" disabled={Boolean(restoreReason)} aria-describedby={restoreReason ? 'version-restore-disabled' : undefined}
+          onClick={() => { if (selected) restoreSelection(selected) }}>
+          <History size={17} /> Restore
         </button>
-        <button className="button version-full-button" disabled={!selected} onClick={() => { if (selected) exportSnapshot(selected) }}>
-          <Download size={17} /> Export Markdown
-        </button>
+        {restoreReason && <p id="version-restore-disabled" className="muted">{restoreReason}</p>}
         <div className={message ? 'version-notice green' : 'sr-only'} role="status">{message}</div>
       </section>
     </aside>
     {comparison && <div ref={comparisonPanel} className="version-comparison-wrap" tabIndex={-1}><VersionComparison comparison={comparison} /></div>}
-    {dialog && <VersionDialog restore={dialog === 'create' ? undefined : dialog} hasOpenEditor={hasOpenEditor}
+    {dialog && <VersionDialog restore={dialog === 'create' ? undefined : dialog} latest={latest} changes={detected} hasOpenEditor={hasOpenEditor}
       onClose={() => setDialog(undefined)} onSubmit={save} />}
   </div>
 }

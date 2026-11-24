@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { TopicService } from '../application/topic-service'
 import type { Topic } from '../domain/topic'
 import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-topic-repository'
 
 const timestamp = '2026-11-19T12:00:00.000Z'
-const root: Topic = { id: 'root', title: 'Root', description: '', content: '', createdAt: timestamp, updatedAt: timestamp }
+const root: Topic = { type: 'General', id: 'root', title: 'Root', description: '', content: '', createdAt: timestamp, updatedAt: timestamp }
 
 describe('LocalStorageTopicRepository', () => {
   const entries = new Map<string, string>()
@@ -30,6 +31,27 @@ describe('LocalStorageTopicRepository', () => {
     await repository.update(updated)
     expect(await new LocalStorageTopicRepository(() => storage).getById(child.id)).toEqual(updated)
     expect(await repository.getById('missing')).toBeUndefined()
+  })
+
+  it('defaults legacy topics to General and restores classification only from typed snapshots', async () => {
+    const legacyPayload = JSON.stringify([{ ...root, type: undefined }])
+    entries.set(TOPIC_STORAGE_KEY, legacyPayload)
+    const service = new TopicService(repository)
+    expect(await repository.getById(root.id)).toMatchObject({ type: 'General' })
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(legacyPayload)
+    const before = await service.createVersion(root.id, 'Legacy version')
+    const workspace = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
+    delete workspace.topicVersions[0].snapshot.type
+    entries.set(TOPIC_STORAGE_KEY, JSON.stringify(workspace))
+    await service.save({ ...root, type: 'Architecture' }, root.id)
+    const classified = await service.createVersion(root.id, 'Architecture')
+    await service.save({ title: 'Renamed', description: '', content: '' }, root.id)
+    expect(await repository.getById(root.id)).toMatchObject({ type: 'Architecture' })
+    await service.save({ ...root, type: 'Pattern' }, root.id)
+    expect((await service.restoreVersion(root.id, before.id)).workspace.topics[0]?.type).toBe('Pattern')
+    expect((await service.restoreVersion(root.id, classified.id)).workspace.topics[0]?.type).toBe('Architecture')
+    expect(await new LocalStorageTopicRepository(() => storage).getById(root.id)).toMatchObject({ type: 'Architecture' })
+    expect(await service.save({ title: 'New topic', description: '', content: '' })).toMatchObject({ type: 'General' })
   })
 
   it('rejects duplicate or missing topics without changing data', async () => {

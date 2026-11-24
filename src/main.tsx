@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 import { ImplementationService } from './application/implementation-service'
 import { InstructionService } from './application/instruction-service'
 import { KnowledgeService } from './application/knowledge-service'
@@ -16,6 +16,11 @@ const implementationService = new ImplementationService(repository)
 const instructionService = new InstructionService(repository)
 const knowledgeService = new KnowledgeService(repository)
 
+const router = createBrowserRouter([{
+  path: '*',
+  element: <App service={service} implementationService={implementationService} instructionService={instructionService} knowledgeService={knowledgeService} />,
+}])
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode><BrowserRouter><App service={service} implementationService={implementationService} instructionService={instructionService} knowledgeService={knowledgeService} /></BrowserRouter></StrictMode>,
+  <StrictMode><RouterProvider router={router} /></StrictMode>,
 )

@@ -1,4 +1,7 @@
-﻿import type { ImplementationTask, Project, TopicImplementation } from '../domain/implementation'
+import type { AgentConfigChange } from '../domain/project-agent-config'
+import type { SafeguardInput } from '../domain/project-safeguards'
+import type { ImplementationTask, Project, TaskDefinition, TopicImplementation } from '../domain/implementation'
+import type { TopicVersion } from '../domain/topic-version'
 import type { AcceptanceCriterion, ArtifactDetails, ImplementationArtifact, TaskReference } from '../domain/implementation'
 
 export interface ImplementationWorkspace {
@@ -6,6 +9,8 @@ export interface ImplementationWorkspace {
   implementations: TopicImplementation[]
   tasks: ImplementationTask[]
   artifacts: ImplementationArtifact[]
+  taskDefinitions?: TaskDefinition[]
+  knowledgeVersions?: TopicVersion[]
 }
 
 export type ImplementationChanges = Partial<Pick<TopicImplementation, 'status' | 'notes' | 'environment'>> & { branch?: string | null }
@@ -26,6 +31,9 @@ export interface ImplementationRepository {
   readImplementations(): Promise<ImplementationWorkspace>
   createProject(project: Project, implementation?: TopicImplementation): Promise<void>
   updateProject(id: string, changes: ProjectChanges): Promise<void>
+  changeProjectAgentConfig(projectId: string, change: AgentConfigChange): Promise<void>
+  saveProjectPolicy(projectId: string, input: SafeguardInput, policyId?: string): Promise<void>
+  deleteProjectPolicy(projectId: string, policyId: string): Promise<void>
   deleteProject(id: string): Promise<void>
   createImplementation(implementation: TopicImplementation): Promise<boolean>
   updateImplementation(id: string, changes: ImplementationChanges): Promise<void>
@@ -38,4 +46,8 @@ export interface ImplementationRepository {
   createArtifact(artifact: ImplementationArtifact): Promise<void>
   updateArtifact(id: string, changes: ArtifactDetails): Promise<void>
   deleteArtifact(id: string): Promise<void>
+  saveTaskDefinition(definition: TaskDefinition): Promise<void>
+  moveTaskDefinition(topicId: string, id: string, destination: -1 | 1 | string): Promise<void>
+  deleteTaskDefinition(topicId: string, id: string): Promise<void>
+  upgradeImplementationKnowledge(id: string): Promise<void>
 }

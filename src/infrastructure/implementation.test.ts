@@ -1,3 +1,4 @@
+import { projectSafeguardPolicies } from '../domain/project-safeguards'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ImplementationService } from '../application/implementation-service'
 import { TopicService } from '../application/topic-service'
@@ -7,6 +8,7 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 
 const timestamp = '2026-11-19T12:00:00.000Z'
 const topic: Topic = {
+  type: 'General',
   id: 'legacy', title: 'User topic', description: 'My description', content: '## My Markdown',
   createdAt: timestamp, updatedAt: timestamp,
 }
@@ -91,6 +93,25 @@ describe('project implementations', () => {
     expect(orderedTasks(state.tasks, first.id).map(item => item.id)).toEqual([task])
     expect(orderedTasks(state.tasks, second.id)).toEqual([])
     expect((await repository.readWorkspace()).topics).toEqual([topic, child])
+  })
+
+  it('preserves the global project and other topic plans when removing one association', async () => {
+    const project = await service.createProject('Shared project', '', topic.id)
+    const otherPlan = await create(project.id, child.id)
+    const separatePlan = await create(aws)
+    const sharedPlan = (await service.list()).implementations.find(item => item.projectId === project.id && item.topicId === topic.id)!
+    await service.createTask(sharedPlan.id, draft)
+    await service.createTask(otherPlan.id, { ...draft, title: 'Keep this task' })
+    await service.updateImplementation(otherPlan.id, { status: 'completed', notes: 'Keep these notes.' })
+    const before = await service.list()
+    await service.deleteImplementation(sharedPlan.id)
+
+    const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
+    const after = await reopened.list()
+    expect(after.projects).toEqual(before.projects)
+    expect(after.implementations).toEqual(before.implementations.filter(item => item.id !== sharedPlan.id))
+    expect(after.tasks).toEqual(before.tasks.filter(task => task.implementationId !== sharedPlan.id))
+    expect(after.implementations.map(item => item.id)).toEqual([otherPlan.id, separatePlan.id])
   })
 
   it('creates, edits, reorders, and deletes tasks within their own implementation', async () => {
@@ -194,7 +215,7 @@ describe('project implementations', () => {
     expect((await service.list()).tasks).toEqual([])
   })
 
-  it('cascades project, implementation, and topic deletions while retaining other projects and plans', async () => {
+  it('hides implementations when projects or topics move to Trash and keeps unrelated plans visible', async () => {
     const first = await create(azure)
     const second = await create(aws)
     const childPlan = await create(aws, child.id)
@@ -222,6 +243,93 @@ describe('project implementations', () => {
     expect((await repository.readWorkspace()).relationships).toEqual([])
   })
 
+  it('migrates legacy safeguards without rewriting on read and preserves independent policy records', async () => {
+    const plan = await create()
+    const raw = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
+    const legacy = raw.implementationData.projects[0]
+    legacy.safeguards = { pullRequests: true, rollback: false }
+    legacy.customSafeguards = [{
+      id: 'custom-policy', name: 'Require pull requests for code changes', category: 'Traceability',
+      description: '**Legacy context**', enabled: true,
+    }]
+    entries.set(TOPIC_STORAGE_KEY, JSON.stringify(raw))
+    const before = entries.get(TOPIC_STORAGE_KEY)
+    const initial = await service.list()
+    const policies = projectSafeguardPolicies(initial.projects[0]!)
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(before)
+    expect(policies).toHaveLength(11)
+    expect(policies.find(item => item.id.endsWith(':pullRequests'))?.enabled).toBe(true)
+    const custom = policies.find(item => item.id === 'custom-policy')!
+    expect(custom).toMatchObject({ name: 'Require pull requests for code changes (custom)', context: '**Legacy context**',
+      enabled: true, severity: 'Medium', enforcement: 'Advisory', createdAt: initial.projects[0]?.createdAt })
+
+    await service.saveSafeguard(azure, { ...custom, name: 'Review changes', enabled: false, severity: 'Critical', enforcement: 'Block' }, custom.id)
+    const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
+    const saved = await reopened.list()
+    expect(saved.projects[0]).not.toHaveProperty('safeguards')
+    expect(saved.projects[0]).not.toHaveProperty('customSafeguards')
+    expect(saved.projects[0]?.safeguardPolicies).toHaveLength(11)
+    expect(saved.projects[0]?.safeguardPolicies?.find(item => item.id === custom.id)).toMatchObject({
+      name: 'Review changes', enabled: false, createdAt: custom.createdAt, severity: 'Critical', enforcement: 'Block',
+    })
+    expect(saved.projects[1]).toEqual(initial.projects[1])
+    expect(saved.implementations).toEqual([plan])
+    await reopened.deleteSafeguard(azure, custom.id)
+    expect((await service.list()).projects[0]?.safeguardPolicies?.some(item => item.id === custom.id)).toBe(false)
+  })
+
+  it('rejects duplicate policy names and failed writes atomically', async () => {
+    const policy = { name: 'Review changes', category: 'Traceability' as const, context: '', enabled: true,
+      severity: 'High' as const, enforcement: 'Require approval' as const }
+    await service.saveSafeguard(azure, policy)
+    const before = entries.get(TOPIC_STORAGE_KEY)
+    await expect(service.saveSafeguard(azure, { ...policy, name: ' review CHANGES ' })).rejects.toThrow('already exists')
+    await expect(service.saveSafeguard(azure, { ...policy, name: '   ' })).rejects.toThrow('Enter a safeguard name')
+    storage.setItem.mockImplementationOnce(() => { throw new Error('Quota exceeded') })
+    await expect(service.saveSafeguard(azure, { ...policy, name: 'New name' })).rejects.toThrow('could not save')
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(before)
+    await service.saveSafeguard(aws, policy)
+    expect((await service.list()).projects.map(item => item.safeguardPolicies?.filter(policy => policy.name === 'Review changes').length)).toEqual([1, 1])
+  })
+
+  it('persists project agent configuration independently without disturbing plans or safeguards', async () => {
+    const plan = await create()
+    await service.saveSafeguard(azure, { name: 'Keep approvals', context: '', category: 'Traceability',
+      severity: 'High', enforcement: 'Require approval', enabled: true })
+    const before = await service.list()
+    await service.changeAgentConfig(azure, { kind: 'context', content: '## Preserved Markdown\n' })
+    await service.changeAgentConfig(azure, { kind: 'workflow', content: '1. Review the safeguards.' })
+    const repo = { name: 'Playbook', url: 'https://example.com/team/repo.git', provider: 'GitHub' as const, defaultBranch: 'main' }
+    await service.changeAgentConfig(azure, { kind: 'repository', input: repo })
+    const original = entries.get(TOPIC_STORAGE_KEY)
+    await expect(service.changeAgentConfig(azure, { kind: 'repository', input: { ...repo, url: 'https://EXAMPLE.com/team/repo/' } }))
+      .rejects.toThrow('already registered')
+    for (const url of ['javascript:alert(1)', 'https://user:pass@example.com/team/repo', 'https://example.com/repo?token=secret']) {
+      await expect(service.changeAgentConfig(azure, { kind: 'repository', input: { ...repo, url } })).rejects.toThrow(/valid HTTP|without query/)
+    }
+    expect(entries.get(TOPIC_STORAGE_KEY)).toBe(original)
+    const gate = { name: 'Unit tests', description: 'Unit tests must pass.', command: 'npm test', enabled: true, required: true }
+    await service.changeAgentConfig(azure, { kind: 'qualityGate', input: gate })
+    const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
+    const config = (await reopened.list()).projects.find(project => project.id === azure)?.agentConfig
+    expect(config).toMatchObject({ context: '## Preserved Markdown\n', workflow: '1. Review the safeguards.',
+      repositories: [expect.objectContaining(repo)], qualityGates: [expect.objectContaining(gate)] })
+    const repositoryRecord = config!.repositories[0]!
+    const gateRecord = config!.qualityGates[0]!
+    await reopened.changeAgentConfig(azure, { kind: 'repository', id: repositoryRecord.id, input: { ...repo, defaultBranch: 'release' } })
+    await reopened.changeAgentConfig(azure, { kind: 'toggleQualityGate', id: gateRecord.id })
+    const after = await reopened.list()
+    expect(after.projects[0]?.agentConfig?.repositories[0]).toMatchObject({ id: repositoryRecord.id,
+      createdAt: repositoryRecord.createdAt, defaultBranch: 'release', updatedAt: expect.any(String) })
+    expect(after.projects[0]?.agentConfig?.qualityGates[0]).toMatchObject({ id: gateRecord.id, enabled: false })
+    expect(after.projects[0]?.safeguardPolicies).toEqual(before.projects[0]?.safeguardPolicies)
+    expect(after.projects[1]).toEqual(before.projects[1])
+    expect(after.implementations).toEqual([plan])
+    await reopened.changeAgentConfig(azure, { kind: 'removeRepository', id: repositoryRecord.id })
+    await reopened.changeAgentConfig(azure, { kind: 'removeQualityGate', id: gateRecord.id })
+    expect((await service.list()).projects[0]?.agentConfig).toMatchObject({ repositories: [], qualityGates: [] })
+  })
+
   it('does not partially delete a project if saving fails', async () => {
     const plan = await create()
     await service.createTask(plan.id, draft)
@@ -243,7 +351,7 @@ describe('project implementations', () => {
     expect(await repository.readWorkspace()).toMatchObject({ topics, relationships })
     expect(entries.get(TOPIC_STORAGE_KEY)).toBe(raw)
     await create()
-    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 5, topics, relationships })
+    expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({ version: 6, topics, relationships })
     expect(await new LocalStorageTopicRepository(() => storage).readWorkspace()).toMatchObject({ topics, relationships })
   })
 
@@ -251,7 +359,9 @@ describe('project implementations', () => {
     await service.deleteProject(azure)
     await service.deleteProject(aws)
     const reopened = new LocalStorageTopicRepository(() => storage)
-    expect(await reopened.readImplementations()).toEqual({ projects: [], implementations: [], tasks: [], artifacts: [] })
+    expect(await reopened.readImplementations()).toEqual({
+      projects: [], implementations: [], tasks: [], artifacts: [], taskDefinitions: [], knowledgeVersions: [],
+    })
     expect(await reopened.list()).toEqual([topic, child])
   })
 
@@ -291,11 +401,15 @@ describe('project implementations', () => {
     await expect(add(first, 'missing')).rejects.toThrow('same implementation')
     await add(first, second)
     await add(second, third)
+    expect(orderedTasks((await service.list()).tasks, plan.id).map(task => task.id)).toEqual([first, second, third])
     await expect(add(first, second)).rejects.toThrow('already exists')
     await expect(add(third, first)).rejects.toThrow('cycle')
+    await service.moveTaskTo(first, third)
     const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
-    expect((await reopened.list()).tasks.map(task => task.dependencyIds)).toEqual([[second], [third], [], []])
+    const reordered = orderedTasks((await reopened.list()).tasks, plan.id)
+    expect(reordered.map(task => [task.id, task.dependencyIds])).toEqual([[second, [third]], [third, []], [first, [second]]])
     await reopened.changeTaskDetails(first, { kind: 'removeDependency', id: second })
+    expect(orderedTasks((await reopened.list()).tasks, plan.id).map(task => task.id)).toEqual([second, third, first])
     await add(third, first)
     await service.deleteTask(third)
     expect((await service.list()).tasks.map(task => task.dependencyIds)).toEqual([[], [], []])
@@ -356,6 +470,34 @@ describe('project implementations', () => {
     expect((await service.list()).artifacts).toEqual([])
   })
 
+  it('persists optional artifact task links within a project and clears them when tasks are removed', async () => {
+    const plan = await create()
+    const sameProject = await create(azure, child.id)
+    const otherProject = await create(aws)
+    const localTask = await service.createTask(plan.id, draft)
+    const sharedTask = await service.createTask(sameProject.id, draft)
+    const foreignTask = await service.createTask(otherProject.id, draft)
+    const artifact = { title: 'Runbook', type: 'documentation' } as const
+    await expect(service.saveArtifact(plan.id, { ...artifact, relatedTaskId: foreignTask })).rejects.toThrow('this project')
+    await service.saveArtifact(plan.id, { ...artifact, relatedTaskId: sharedTask })
+    const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
+    const [saved] = (await reopened.list()).artifacts
+    expect(saved).toMatchObject({ ...artifact, relatedTaskId: sharedTask })
+    const readLink = async () => (await reopened.list()).artifacts[0]?.relatedTaskId
+    await expect(reopened.saveArtifact(plan.id, { ...artifact, relatedTaskId: foreignTask }, saved!.id)).rejects.toThrow('this project')
+    expect(await readLink()).toBe(sharedTask)
+    await reopened.saveArtifact(plan.id, artifact, saved!.id)
+    expect(await readLink()).toBeUndefined()
+    await reopened.saveArtifact(plan.id, { ...artifact, relatedTaskId: localTask }, saved!.id)
+    expect(await readLink()).toBe(localTask)
+    await reopened.deleteTask(localTask)
+    expect(await readLink()).toBeUndefined()
+    await reopened.saveArtifact(plan.id, { ...artifact, relatedTaskId: sharedTask }, saved!.id)
+    await reopened.deleteImplementation(sameProject.id)
+    expect((await reopened.list()).artifacts[0]).toMatchObject({ ...artifact, id: saved!.id })
+    expect(await readLink()).toBeUndefined()
+  })
+
   it('adds safe defaults to existing version 3 records without rewriting on read', async () => {
     const plan = await create()
     const taskId = await service.createTask(plan.id, draft)
@@ -372,7 +514,7 @@ describe('project implementations', () => {
 
     const reopened = new ImplementationService(new LocalStorageTopicRepository(() => storage))
     const migrated = await reopened.list()
-    expect(migrated).toEqual({
+    expect(migrated).toMatchObject({
       ...raw.implementationData,
       implementations: [{ ...raw.implementationData.implementations[0], environment: 'development' }],
       tasks: [{ ...raw.implementationData.tasks[0], criteria: [], dependencyIds: [], references: [] }],

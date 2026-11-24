@@ -1,8 +1,8 @@
 .agent-instructions {
   container: agent-instructions / inline-size;
   display: grid;
-  grid-template-columns: minmax(0, 48fr) minmax(0, 8fr) minmax(0, 44fr);
-  grid-template-areas: "settings document document" "artifacts artifacts template";
+  grid-template-columns: minmax(0, 48fr) minmax(0, 52fr);
+  grid-template-areas: "settings document" "artifacts artifacts";
   gap: 14px;
   align-items: stretch;
 }
@@ -11,17 +11,15 @@
 .agent-settings { grid-area: settings; }
 .agent-document { grid-area: document; }
 .agent-artifacts { grid-area: artifacts; }
-.agent-template { grid-area: template; }
-.agent-settings, .agent-document, .agent-artifacts, .agent-template { display: flex; flex-direction: column; gap: 10px; }
+.agent-settings, .agent-document, .agent-artifacts { display: flex; flex-direction: column; gap: 10px; }
 .agent-field { display: grid; gap: 4px; }
 .agent-field > label { font-weight: 650; }
 .agent-field .field { width: 100%; min-width: 0; min-height: 35px; padding-block: 5px; }
 .agent-field .field:disabled { color: var(--muted); background: var(--side); cursor: default; }
 .agent-field input:disabled { text-overflow: ellipsis; }
-.agent-source-fields { display: grid; gap: 6px 10px; }
-.agent-source-fields > p { grid-column: 1 / -1; }
 .agent-hint { margin: 0; font-size: .88rem; overflow-wrap: anywhere; }
 .agent-options { display: grid; gap: 3px; border: 0; min-width: 0; padding: 0; margin: 0; }
+.agent-options legend { margin-bottom: 5px; font-weight: 650; }
 .agent-options label { display: flex; align-items: center; gap: 8px; min-height: 23px; }
 .agent-options input {
   appearance: none;
@@ -86,6 +84,15 @@
 .agent-artifact-name[aria-pressed="true"] { color: var(--purple); }
 .agent-artifact-type { padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); font-size: .8rem; }
 .agent-artifact-download { justify-self: end; }
+.workspace-templates { padding: 16px; }
+.workspace-templates-header { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+.workspace-templates-header h1, .workspace-template-list h2 { margin: 0; }
+.workspace-template-list { display: grid; gap: 10px; list-style: none; padding: 0; margin: 16px 0 0; }
+.workspace-template-list > li {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--side);
+}
+.workspace-template-list > li > div:first-child { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .agent-template-dialog { max-height: min(85vh, 720px); overflow: auto; }
 .agent-template-dialog fieldset { display: grid; gap: 10px; min-width: 0; padding: 0; border: 0; }
 .agent-template-dialog textarea { resize: vertical; }
@@ -95,10 +102,6 @@
 
 @container agent-instructions (width < 640px) {
   .agent-instructions > section { grid-area: auto; grid-column: 1 / -1; }
-}
-
-@container agent-instructions (width >= 900px) {
-  .agent-source-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @container agent-instructions (width < 420px) {

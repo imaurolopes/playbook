@@ -10,7 +10,7 @@ import { TOPIC_ORGANIZATION_BACKUP_PREFIX } from './topic-organization-migration
 
 const timestamp = '2026-11-19T12:00:00.000Z'
 function topic(id: string): Topic {
-  return { id, title: id, description: 'Original description', content: '# Original content', createdAt: timestamp, updatedAt: timestamp }
+  return { id, type: 'General', title: id, description: 'Original description', content: '# Original content', createdAt: timestamp, updatedAt: timestamp }
 }
 
 const firstBackup = TOPIC_ORGANIZATION_BACKUP_PREFIX + '1'
@@ -70,10 +70,15 @@ describe('flat topic migration', () => {
     await open().update({ ...migrated.topics[1]!, title: 'Edited after migration' })
     const saved = JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)
     expect(saved).toMatchObject({
-      version: 5, relationships: active.relationships, knowledgeSections: active.knowledgeSections,
-      legacyKnowledgeData: active.legacyKnowledgeData, implementationData: active.implementationData,
-      instructionDrafts: active.instructionDrafts, topicVersions: active.topicVersions,
+      version: 6, relationships: active.relationships, knowledgeSections: active.knowledgeSections,
+      legacyKnowledgeData: active.legacyKnowledgeData,
+      implementationData: { ...active.implementationData, implementations: active.implementationData.implementations.map(
+        (plan: { topicId: string }) => ({ ...plan, knowledgeVersionId: 'implementation-baseline:' + plan.topicId }),
+      ) },
+      instructionDrafts: active.instructionDrafts,
     })
+    expect(saved.topicVersions.slice(0, active.topicVersions.length)).toEqual(active.topicVersions)
+    expect(saved.topicVersions.at(-1)).toMatchObject({ id: 'implementation-baseline:second' })
     expect(saved.topics[1]).toEqual({ ...active.topics[1], title: 'Edited after migration' })
     expect(saved).not.toHaveProperty('folders')
     expect(saved).not.toHaveProperty('legacyNavigation')

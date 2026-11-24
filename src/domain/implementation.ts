@@ -1,4 +1,7 @@
-﻿export const implementationStatuses = ['not_started', 'planned', 'in_progress', 'blocked', 'completed'] as const
+import type { ProjectAgentConfig } from './project-agent-config'
+import type { CustomSafeguard, ProjectSafeguards, SafeguardPolicy } from './project-safeguards'
+
+export const implementationStatuses = ['not_started', 'planned', 'in_progress', 'blocked', 'completed'] as const
 export type ImplementationStatus = (typeof implementationStatuses)[number]
 
 export const taskStatuses = ['todo', 'in_progress', 'blocked', 'done'] as const
@@ -27,6 +30,7 @@ export type TaskReference = ReferenceDetails & { id: string }
 export interface ArtifactDetails {
   title: string
   type: ArtifactType
+  relatedTaskId?: string
   url?: string
   description?: string
 }
@@ -39,6 +43,11 @@ export interface ImplementationArtifact extends ArtifactDetails {
 }
 
 export interface Project {
+  deletedAt?: string
+  agentConfig?: ProjectAgentConfig
+  safeguardPolicies?: SafeguardPolicy[]
+  safeguards?: ProjectSafeguards
+  customSafeguards?: CustomSafeguard[]
   id: string
   name: string
   description: string
@@ -50,6 +59,7 @@ export interface TopicImplementation {
   id: string
   topicId: string
   projectId: string
+  knowledgeVersionId?: string
   status: ImplementationStatus
   notes: string
   environment: Environment
@@ -61,6 +71,9 @@ export interface TopicImplementation {
 export interface ImplementationTask {
   id: string
   implementationId: string
+  definitionId?: string
+  knowledgeVersionId?: string
+  projectDefinition?: TaskDefinition
   title: string
   description: string
   status: TaskStatus
@@ -70,6 +83,12 @@ export interface ImplementationTask {
   references: TaskReference[]
   createdAt: string
   updatedAt: string
+}
+
+export interface TaskDefinition extends Pick<ImplementationTask, 'id' | 'title' | 'description' | 'order' | 'dependencyIds' | 'references' | 'createdAt' | 'updatedAt'> {
+  topicId: string
+  sourceProjectId?: string
+  criteria: Omit<AcceptanceCriterion, 'completed'>[]
 }
 
 export function orderedTasks(tasks: readonly ImplementationTask[], implementationId: string): ImplementationTask[] {
@@ -85,7 +104,9 @@ export function webUrl(value: string): string | undefined {
   }
 }
 
-export function validateTaskDependency(task: ImplementationTask, targetId: string, tasks: ReadonlyMap<string, ImplementationTask>) {
+type TaskDependencyNode = Pick<ImplementationTask, 'id' | 'implementationId' | 'dependencyIds'>
+
+export function validateTaskDependency(task: TaskDependencyNode, targetId: string, tasks: ReadonlyMap<string, TaskDependencyNode>) {
   if (task.id === targetId) throw new Error('A task cannot depend on itself.')
   if (tasks.get(targetId)?.implementationId !== task.implementationId) {
     throw new Error('Choose a task in the same implementation.')

@@ -7,7 +7,7 @@ import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-
 const timestamp = '2026-11-19T12:00:00.000Z'
 function makeTopic(id: string): Topic {
   return {
-    id, title: id, description: 'User description', content: '## User Markdown',
+    id, type: 'General', title: id, description: 'User description', content: '## User Markdown',
     createdAt: timestamp, updatedAt: timestamp,
   }
 }
@@ -122,10 +122,11 @@ describe('topic relationships', () => {
   })
 
   it('leaves topics and relationships intact if a deletion write fails', async () => {
-    const edge = await add('cdc', 'kafka')
+    await add('cdc', 'kafka')
+    const before = await repository.readWorkspace()
     storage.setItem.mockImplementationOnce(() => { throw new Error('Quota exceeded') })
     await expect(service.delete('kafka')).rejects.toThrow('could not save')
-    expect(await repository.readWorkspace()).toEqual({ topics, trashedTopics: [], relationships: [edge] })
+    expect(await repository.readWorkspace()).toEqual(before)
   })
 
   it('recognizes an empty legacy workspace and leaves corrupt relationship records untouched', async () => {

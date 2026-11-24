@@ -4,7 +4,7 @@ import type { Topic } from '../domain/topic'
 import { LocalStorageTopicRepository, TOPIC_STORAGE_KEY } from './local-storage-topic-repository'
 
 const timestamp = '2026-11-19T12:00:00.000Z'
-const topic: Topic = { id: 'root', title: 'Legacy topic', description: '', content: '# Existing Markdown', createdAt: timestamp, updatedAt: timestamp }
+const topic: Topic = { type: 'General', id: 'root', title: 'Legacy topic', description: '', content: '# Existing Markdown', createdAt: timestamp, updatedAt: timestamp }
 const section = { id: 'runbook', topicId: topic.id, key: 'runbook', title: 'Runbook', content: 'Run checks.', order: 10 }
 const legacy = {
   sections: [section],
@@ -58,7 +58,7 @@ describe('persisted knowledge', () => {
     const reopened = new LocalStorageTopicRepository(() => storage)
     const updated = { ...section, content: 'Updated Markdown' }
     expect((await reopened.readKnowledge(topic.id)).sections).toEqual([updated])
-    expect(await reopened.getById(topic.id)).toEqual(topic)
+    expect(await reopened.getById(topic.id)).toEqual({ ...topic, updatedAt: expect.any(String) })
     expect(JSON.parse(entries.get(TOPIC_STORAGE_KEY)!)).toMatchObject({
       implementationData: workspace.implementationData, topicVersions: workspace.topicVersions,
       knowledgeSections: [updated], legacyKnowledgeData: legacy,

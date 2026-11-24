@@ -23,11 +23,11 @@ export class InstructionService {
   async load(key: InstructionKey) {
     const [draft, implementations] = await Promise.all([
       this.repository.readInstructionDraft(key),
-      this.repository.readImplementations(),
+      key.projectId ? this.repository.readImplementations() : undefined,
     ])
-    return { draft, hasImplementation: implementations.implementations.some(item =>
+    return { draft, hasImplementation: implementations?.implementations.some(item =>
       item.topicId === key.topicId && item.projectId === key.projectId,
-    ) }
+    ) ?? false }
   }
 
   settings(key: InstructionKey) {
@@ -67,16 +67,30 @@ export class InstructionService {
     return this.repository.deleteGenerationTemplate(id)
   }
 
-  async generate(key: InstructionKey, options: InstructionOptions, confirmed?: InstructionDraft) {
+  private async render(key: InstructionKey, options: InstructionOptions) {
     const profile = getAgentProfile(key.agentProfileId)
     if (!profile) throw new Error('Choose an agent profile.')
-    const [topics, implementations, settings, templates] = await Promise.all([
-      this.repository.readWorkspace(), this.repository.readImplementations(), this.settings(key), this.templates(),
+    const [topics, settings, templates] = await Promise.all([
+      this.repository.readWorkspace(), this.settings(key), this.templates(),
     ])
+    const topicOnly = key.projectId === undefined || settings.usage === 'topic'
+    const source = topicOnly
+      ? collectInstructionSource({ ...key, projectId: undefined }, topics, undefined, await this.repository.readTopicInstructionKnowledge(key.topicId))
+      : collectInstructionSource(key, topics, await this.repository.readImplementations())
     const template = templates.find(item => item.id === settings.templateId) ?? defaultGenerationTemplate
-    const { agents: generatedMarkdown, yaml, ...artifacts } = generateInstructions(
-      collectInstructionSource(key, topics, implementations), options, profile, settings, template,
+    return generateInstructions(
+      source, options, profile, topicOnly ? { ...settings, usage: 'topic' } : settings, template,
     )
+  }
+
+  async isOutdated(key: InstructionKey, options: InstructionOptions, draft: InstructionDraft) {
+    const { agents, prompt, checklist, yaml } = await this.render(key, options)
+    return draft.generatedMarkdown !== agents || draft.artifacts?.prompt !== prompt ||
+      draft.artifacts?.checklist !== checklist || draft.yaml !== yaml
+  }
+
+  async generate(key: InstructionKey, options: InstructionOptions, confirmed?: InstructionDraft) {
+    const { agents: generatedMarkdown, yaml, ...artifacts } = await this.render(key, options)
 
     return this.repository.updateInstructionDraft(key, current => {
       if (current?.manuallyEdited && (confirmed?.markdown !== current.markdown ||
@@ -88,6 +102,7 @@ export class InstructionService {
   }
 
   saveEdit(key: InstructionKey, markdown: string) {
+    if (key.projectId === undefined) return Promise.reject(new Error('Topic instructions are read-only.'))
     return this.repository.updateInstructionDraft(key, current => {
       if (!current) throw new Error('Generate instructions before editing.')
       if (current.markdown === markdown) return current

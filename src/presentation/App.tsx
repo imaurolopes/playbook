@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useMatch, useNavigate, useParams } from 'react-router'
 import {
-  Bot, CalendarDays, CheckCircle2, ChevronRight, Code2, FileText, FolderClosed, GitFork,
-  Info, Layers3, Link2, Pencil, Plus, Trash2,
+  Bot, CalendarDays, CheckCircle2, ChevronRight, Code2, FolderClosed, GitFork,
+  Info, Layers3, Link2, Pencil, Plus,
 } from 'lucide-react'
 import type { ImplementationService } from '../application/implementation-service'
 import type { InstructionService } from '../application/instruction-service'
 import type { KnowledgeService } from '../application/knowledge-service'
 import type { TopicWorkspace } from '../application/topic-repository'
 import type { TopicService } from '../application/topic-service'
-import type { TopicMetadata as Metadata } from '../domain/topic-metadata'
+import { mergeTechnicalDomains, technicalDomainsFor, type TopicMetadata as Metadata } from '../domain/topic-metadata'
 import type { Topic, TopicInput } from '../domain/topic'
 import { type RelationshipInput } from '../domain/topic-relationship'
 import { groupDetails, topicRelationshipGroups } from './topic-relationship-groups'
 import { Dependencies } from './Dependencies'
 import { AgentInstructions } from './AgentInstructions'
-import { Implementation } from './Implementation'
+import { GenerationTemplates } from './GenerationTemplates'
+import { Implementation, ImplementationDialog } from './Implementation'
 import { Markdown } from './markdown'
 import { KnowledgeContent } from './KnowledgeContent'
 import { Shell, TopicList, topicPath } from './navigation'
-import { TopicEditor } from './TopicEditor'
+import { TopicEditor, TopicEditDialog } from './TopicEditor'
+import { TopicActions, type TopicAction } from './TopicActions'
+import { topicTypeDisplay } from './topic-types'
+import { TaskDefinitions } from './TaskDefinitions'
+import { Projects } from './Projects'
 import { Trash } from './Trash'
 import { TopicMetadata } from './TopicMetadata'
 import { VersionHistory } from './VersionHistory'
@@ -39,12 +44,14 @@ const topicTimestamp = new Intl.DateTimeFormat('en-US', {
 })
 
 function TopicSummary({ topic, workspace }: { topic: Topic; workspace: TopicWorkspace }) {
+  const { icon: TypeIcon, label, color } = topicTypeDisplay[topic.type]
   const groups = topicRelationshipGroups(topic.id, workspace.topics, workspace.relationships)
   const related = groupDetails.flatMap(({ key, label }) => groups[key].map(row => ({ ...row, label })))
   return <aside className="topic-summary" aria-label="Topic summary">
     <section className="panel summary-panel">
       <h2>Quick view</h2>
       <dl>
+        <div><dt><TypeIcon style={{ color }} aria-hidden="true" /> Type</dt><dd>{label}</dd></div>
         <div><dt><CheckCircle2 className="green" /> Storage</dt><dd>Saved locally</dd></div>
         <div><dt><CalendarDays /> Updated</dt><dd><time dateTime={topic.updatedAt}>{topicTimestamp.format(new Date(topic.updatedAt))}</time></dd></div>
         <div><dt><CalendarDays /> Created</dt><dd><time dateTime={topic.createdAt}>{topicTimestamp.format(new Date(topic.createdAt))}</time></dd></div>
@@ -70,22 +77,19 @@ interface TopicRouteProps {
   instructionService: InstructionService
   knowledgeService: KnowledgeService
   onSave: (input: TopicInput, id?: string) => Promise<void>
-  onSaveMetadata: (topicId: string, metadata: Metadata) => Promise<Topic>
-  onDelete: (id: string) => Promise<void>
+  onSaveMetadata: (topicId: string, metadata: Metadata, type: Topic['type']) => Promise<Topic>
+  onTopicAction: (action: TopicAction, topic: Topic) => void
   onAddRelationship: (input: RelationshipInput) => Promise<void>
   onEditRelationship: (id: string, input: RelationshipInput) => Promise<void>
   onRemoveRelationship: (id: string) => Promise<void>
 }
 
-function TopicScreen({ topic, workspace, topicService, implementationService, instructionService, knowledgeService, onRestored, onSave, onSaveMetadata, onDelete, onAddRelationship, onEditRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
+function TopicScreen({ topic, workspace, topicService, implementationService, instructionService, knowledgeService, onRestored, onSave, onSaveMetadata, onTopicAction, onAddRelationship, onEditRelationship, onRemoveRelationship }: TopicRouteProps & { topic: Topic }) {
+  const { icon: TopicIcon, color } = topicTypeDisplay[topic.type]
   const { topics, relationships } = workspace
   const { tab } = useParams()
   const { search } = useLocation()
-  const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState('')
-  const dialog = useRef<HTMLDialogElement>(null)
   const tabsNav = useRef<HTMLElement>(null)
   useEffect(() => {
     const nav = tabsNav.current
@@ -97,19 +101,10 @@ function TopicScreen({ topic, workspace, topicService, implementationService, in
       nav.scrollLeft += (link.left + link.right - viewport.left - viewport.right) / 2
     }
   }, [tab])
-  const activeTab = tabs.find(([slug]) => slug === tab)
-  if (!activeTab) return <Navigate to={topicPath(topic.id) + search} replace />
-  const [slug] = activeTab
-
-  async function remove() {
-    setDeleting(true)
-    setError('')
-    try {
-      await onDelete(topic.id)
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'Could not move this topic to Trash.')
-      setDeleting(false)
-    }
+  const slug = tab === 'execution' ? tab : tabs.find(([value]) => value === tab)?.[0]
+  if (!slug) return <Navigate to={topicPath(topic.id) + search} replace />
+  if (slug === 'implementation' && new URLSearchParams(search).has('project')) {
+    return <Navigate replace to={topicPath(topic.id, 'execution') + search} />
   }
 
   return <>
@@ -119,21 +114,14 @@ function TopicScreen({ topic, workspace, topicService, implementationService, in
         <span aria-current="page"><ChevronRight size={14} /> {topic.title}</span>
       </nav>
       <div className="topic-title-row">
-        <h1><FileText className="purple" size={29} /> {topic.title}</h1>
-        <div className="topic-actions">
-          <span className="saved-chip"><CheckCircle2 size={16} /> Saved locally</span>
-          <button className="button icon-button" title="Move to Trash" aria-label="Move to Trash" onClick={() => {
-            setError('')
-            dialog.current?.showModal()
-          }}><Trash2 size={18} /></button>
-          <button className="button primary" onClick={() => {
-            setEditing(true)
-            if (slug !== 'content') navigate(topicPath(topic.id) + search)
-          }}><Pencil size={17} /> Edit</button>
+        <div className="topic-title-group">
+          <h1><TopicIcon style={{ color }} size={29} aria-hidden="true" /> {topic.title}</h1>
+          <TopicActions title={topic.title} onAction={action => onTopicAction(action, topic)} />
         </div>
+        <span className="saved-chip"><CheckCircle2 size={16} /> Saved locally</span>
       </div>
       <nav ref={tabsNav} className="tabs" aria-label="Topic sections">
-        {tabs.map(([value, name, Icon]) => <Link key={value} to={topicPath(topic.id, value) + search} aria-current={slug === value ? 'page' : undefined}><Icon size={19} /> {name}</Link>)}
+        {tabs.map(([value, name, Icon]) => <Link key={value} to={topicPath(topic.id, value) + (value === 'implementation' ? '' : search)} aria-current={slug === value ? 'page' : undefined}><Icon size={19} /> {name}</Link>)}
       </nav>
     </div>
 
@@ -144,7 +132,12 @@ function TopicScreen({ topic, workspace, topicService, implementationService, in
           setEditing(false)
         }} />
         : slug === 'content' && <article className="panel context-panel">
-          <h2>Context</h2>
+          <header className="topic-details-heading">
+            <h2>Summary</h2>
+            <div className="topic-details-actions">
+              <button className="button primary" onClick={() => setEditing(true)}><Pencil size={17} aria-hidden="true" /> Edit</button>
+            </div>
+          </header>
           <p className={topic.description ? 'topic-description' : 'topic-description muted'}>{topic.description || 'No description has been added.'}</p>
           <Markdown content={topic.content} />
           <KnowledgeContent topicId={topic.id} service={knowledgeService} />
@@ -152,23 +145,15 @@ function TopicScreen({ topic, workspace, topicService, implementationService, in
       <TopicSummary topic={topic} workspace={workspace} />
     </div>
     {slug === 'dependencies' && <Dependencies topic={topic} topics={topics} relationships={relationships} onAdd={onAddRelationship} onEdit={onEditRelationship} onRemove={onRemoveRelationship} />}
-    {slug === 'implementation' && <Implementation topic={topic} topics={topics} service={implementationService} />}
+    {slug === 'implementation' && <TaskDefinitions topic={topic} topics={topics} service={implementationService} />}
+    {slug === 'execution' && <Implementation topic={topic} topics={topics} service={implementationService} />}
     {slug === 'agent-instructions' && <AgentInstructions topic={topic} service={instructionService} />}
-    {slug === 'version-history' && <VersionHistory topic={topic} workspace={workspace} service={topicService} hasOpenEditor={editing} onRestored={restored => {
+    {slug === 'version-history' && <VersionHistory topic={topic} service={topicService} hasOpenEditor={editing} onRestored={restored => {
       setEditing(false)
       onRestored(restored)
     }} />}
     {slug === 'metadata' && <TopicMetadata topic={topic} workspace={workspace} service={topicService}
-      onSave={metadata => onSaveMetadata(topic.id, metadata)} />}
-    <dialog ref={dialog} className="panel delete-dialog" aria-labelledby="delete-title" onCancel={event => { if (deleting) event.preventDefault() }}>
-      <h2 id="delete-title">Move to Trash?</h2>
-      <p>You can restore <strong>{topic.title}</strong> and its associated data from Trash.</p>
-      {error && <p className="error" role="alert">{error}</p>}
-      <div className="editor-actions">
-        <button className="button" autoFocus disabled={deleting} onClick={() => dialog.current?.close()}>Cancel</button>
-        <button className="button danger" disabled={deleting} onClick={() => void remove()}>{deleting ? 'Moving…' : 'Move to Trash'}</button>
-      </div>
-    </dialog>
+      onSave={(metadata, type) => onSaveMetadata(topic.id, metadata, type)} />}
   </>
 }
 
@@ -194,13 +179,21 @@ export function App({ service, implementationService, instructionService, knowle
   const topics = workspace?.topics
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [topicDialog, setTopicDialog] = useState<{ action: 'edit' | 'trash'; topic: Topic }>()
   const [attempt, setAttempt] = useState(0)
   const searchRef = useRef<HTMLInputElement>(null)
+  const [searchRequest, setSearchRequest] = useState(0)
   const navigate = useNavigate()
   const searchRequested = useRef(false)
+  const focusSearchInput = useCallback(() => {
+    searchRef.current?.focus()
+    setSearchRequest(0)
+  }, [])
   const focusSearch = useCallback(() => {
     if (inTopics) {
-      searchRef.current?.focus()
+      setSearchRequest(value => value + 1)
     } else {
       searchRequested.current = true
       navigate('/')
@@ -210,7 +203,7 @@ export function App({ service, implementationService, instructionService, knowle
   useEffect(() => {
     if (inTopics && searchRequested.current) {
       searchRequested.current = false
-      searchRef.current?.focus()
+      setSearchRequest(value => value + 1)
     }
   }, [inTopics])
 
@@ -246,18 +239,35 @@ export function App({ service, implementationService, instructionService, knowle
     }
   }
 
-  async function saveMetadata(topicId: string, metadata: Metadata) {
-    const updated = await service.saveMetadata(topicId, metadata)
+  async function saveMetadata(topicId: string, metadata: Metadata, type: Topic['type']) {
+    const updated = await service.saveMetadata(topicId, metadata, type)
     setWorkspace(current => current && {
       ...current, topics: current.topics.map(topic => topic.id === topicId ? updated : topic),
+      technicalDomains: mergeTechnicalDomains([...(current.technicalDomains ?? []), ...technicalDomainsFor(updated.metadata)]),
     })
     return updated
   }
 
-  async function remove(id: string) {
-    await service.delete(id)
-    setWorkspace(await service.readWorkspace())
-    navigate('/', { replace: true })
+  function onTopicAction(action: TopicAction, topic: Topic) {
+    setActionError('')
+    setNotice('')
+    if (action !== 'duplicate') {
+      setTopicDialog({ action, topic })
+      return
+    }
+    void duplicateTopic(topic.id)
+  }
+
+  async function duplicateTopic(id: string) {
+    try {
+      const copy = await service.duplicate(id)
+      setWorkspace(await service.readWorkspace())
+      setQuery('')
+      navigate(topicPath(copy.id))
+      setNotice(`Created ${copy.title}.`)
+    } catch (problem) {
+      setActionError(problem instanceof Error ? problem.message : 'Could not duplicate this topic.')
+    }
   }
 
   async function addRelationship(input: RelationshipInput) {
@@ -277,17 +287,20 @@ export function App({ service, implementationService, instructionService, knowle
 
   const listProps = {
     selectedId: selectedTopicId,
-    topics: topics ?? [], query, setQuery, searchRef, ready: Boolean(workspace),
+    topics: topics ?? [], query, setQuery, searchRef, ready: Boolean(workspace), onTopicAction,
   }
 
   const defaultTopic = topics?.find(topic => topic.id === 'cdc') ?? topics?.[0]
   const topicRouteProps = workspace && {
-    workspace, topicService: service, onRestored: setWorkspace, implementationService, instructionService, knowledgeService, onSave: save, onSaveMetadata: saveMetadata, onDelete: remove,
+    workspace, topicService: service, onRestored: setWorkspace, implementationService, instructionService, knowledgeService, onSave: save, onSaveMetadata: saveMetadata, onTopicAction,
     onAddRelationship: addRelationship, onEditRelationship: editRelationship, onRemoveRelationship: removeRelationship,
   }
-  return <Shell count={topics?.length} trashCount={workspace?.trashedTopics.length ?? 0} focusSearch={focusSearch}
-    topicsSidebar={inTopics ? <TopicList {...listProps} /> : undefined}>
+  return <Shell count={topics?.length} trashCount={workspace?.trash.length ?? 0} focusSearch={focusSearch}
+    searchRequest={searchRequest} focusSearchInput={focusSearchInput}
+    topicsSidebar={inTopics ? (resizeHandle, pin) => <TopicList {...listProps} resizeHandle={resizeHandle} pin={pin} /> : undefined}>
     <main className="main-workspace" id="workspace">
+      <p className={notice ? 'implementation-notice' : 'sr-only'} role="status">{notice}</p>
+      {actionError && <p className="error" role="alert">{actionError}</p>}
       {error ? <section className="panel placeholder" role="alert">
         <h1>Could not load Playbook</h1><p>{error}</p>
         <button className="button" onClick={() => { setError(''); setAttempt(value => value + 1) }}>Try again</button>
@@ -296,15 +309,30 @@ export function App({ service, implementationService, instructionService, knowle
           <FolderClosed className="purple" size={29} /><h1>No topics yet</h1><p className="muted">Create your first topic to start documenting technical knowledge.</p>
           <Link to="/topics/new" className="button primary"><Plus size={18} /> New topic</Link>
         </section>} />
-        <Route path="/trash" element={<Trash topics={topicRouteProps.workspace.trashedTopics}
-          onRestore={async id => { await service.restoreTopic(id); setWorkspace(await service.readWorkspace()) }}
-          onDelete={async id => { await service.deletePermanently(id); setWorkspace(await service.readWorkspace()) }}
+        <Route path="/projects/*" element={<Projects topics={topicRouteProps.workspace.topics} service={implementationService}
+          onTrashChanged={async () => setWorkspace(await service.readWorkspace())} />} />
+        <Route path="/templates" element={<GenerationTemplates service={instructionService} />} />
+        <Route path="/trash" element={<Trash items={topicRouteProps.workspace.trash}
+          onRestore={async item => { await service.restoreTrash(item); setWorkspace(await service.readWorkspace()) }}
+          onDelete={async item => { await service.purgeTrashItem(item); setWorkspace(await service.readWorkspace()) }}
           onEmpty={async () => { await service.emptyTrash(); setWorkspace(await service.readWorkspace()) }} />} />
         <Route path="/topics/new" element={<section className="new-topic"><h1>New topic</h1><TopicEditor onSave={save} onCancel={() => navigate('/')} /></section>} />
         <Route path="/topics/:topicId" element={<TopicRoute {...topicRouteProps} />} />
         <Route path="/topics/:topicId/:tab" element={<TopicRoute {...topicRouteProps} />} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>}
+      {topicDialog?.action === 'edit' && <TopicEditDialog topic={topicDialog.topic} onClose={() => setTopicDialog(undefined)}
+        onSave={input => save(input, topicDialog.topic.id)} />}
+      {topicDialog?.action === 'trash' && <ImplementationDialog title="Move topic to Trash?" submitLabel="Move to Trash" destructive
+        onClose={() => setTopicDialog(undefined)} onSubmit={async () => {
+          const { topic } = topicDialog
+          await service.delete(topic.id)
+          setWorkspace(await service.readWorkspace())
+          if (selectedTopicId === topic.id) navigate('/', { replace: true })
+          setNotice(`Moved ${topic.title} to Trash.`)
+        }}>
+        <p>This topic will be moved to Trash and can be restored later.</p>
+      </ImplementationDialog>}
     </main>
   </Shell>
 }

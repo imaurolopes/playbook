@@ -1,4 +1,7 @@
-﻿import type { ImplementationWorkspace } from '../application/implementation-repository'
+import { isProjectAgentConfig } from '../domain/project-agent-config'
+import { isCustomSafeguardList, isProjectSafeguards, isSafeguardPolicyList } from '../domain/project-safeguards'
+import type { ImplementationWorkspace } from '../application/implementation-repository'
+import type { TaskDefinition } from '../domain/implementation'
 import {
   artifactTypes, environments, implementationStatuses, taskStatuses, validateTaskDependency, webUrl,
   type AcceptanceCriterion, type ImplementationArtifact, type ImplementationTask, type Project, type TaskReference, type TopicImplementation,
@@ -28,8 +31,13 @@ function isRecord(value: unknown): value is Record<string, unknown> & { id: stri
 }
 
 function isProject(value: unknown): value is Project {
-  return isRecord(value) && typeof value.name === 'string' && Boolean(value.name.trim()) &&
-    typeof value.description === 'string'
+  return isRecord(value) && (value.deletedAt === undefined ||
+    (typeof value.deletedAt === 'string' && Number.isFinite(Date.parse(value.deletedAt)))) && typeof value.name === 'string' && Boolean(value.name.trim()) &&
+    typeof value.description === 'string' &&
+    (value.agentConfig === undefined || isProjectAgentConfig(value.agentConfig)) &&
+    (value.safeguards === undefined || isProjectSafeguards(value.safeguards)) &&
+    (value.customSafeguards === undefined || isCustomSafeguardList(value.customSafeguards)) &&
+    (value.safeguardPolicies === undefined || isSafeguardPolicyList(value.safeguardPolicies))
 }
 
 function isImplementation(value: unknown): value is TopicImplementation {
@@ -60,6 +68,7 @@ function isArtifact(value: unknown): value is ImplementationArtifact {
   return isRecord(value) && typeof value.implementationId === 'string' &&
     typeof value.title === 'string' && Boolean(value.title.trim()) &&
     artifactTypes.some(type => type === value.type) &&
+    (value.relatedTaskId === undefined || typeof value.relatedTaskId === 'string') &&
     (value.url === undefined || (typeof value.url === 'string' && Boolean(webUrl(value.url)))) &&
     (value.description === undefined || typeof value.description === 'string')
 }
@@ -111,5 +120,39 @@ export function readStoredImplementations(value: unknown, topicIds: ReadonlySet<
     }
   }
 
+  const projectByImplementation = new Map(implementations.map(item => [item.id, item.projectId]))
+  for (const artifact of artifacts) {
+    if (artifact.relatedTaskId === undefined) continue
+    const task = graph.get(artifact.relatedTaskId)
+    if (!task || projectByImplementation.get(task.implementationId) !== projectByImplementation.get(artifact.implementationId)) {
+      delete artifact.relatedTaskId
+    }
+  }
   return { projects, implementations, tasks, artifacts }
+}
+
+export function readTaskDefinitions(value: unknown, topicIds: ReadonlySet<string>): TaskDefinition[] {
+  if (!Array.isArray(value) || !value.every((item): item is TaskDefinition =>
+    isRecord(item) && typeof item.topicId === 'string' && topicIds.has(item.topicId) &&
+    typeof item.title === 'string' && Boolean(item.title.trim()) && typeof item.description === 'string' &&
+    !('status' in item) && !('implementationId' in item) && isOrder(item.order) &&
+    (item.sourceProjectId === undefined || typeof item.sourceProjectId === 'string') &&
+    Array.isArray(item.criteria) && item.criteria.every(criterion =>
+      hasId(criterion) && !('completed' in criterion) && isCriterion({ ...criterion, completed: false })) &&
+    unique(item.criteria.map(criterion => criterion.id)) && unique(item.criteria.map(criterion => criterion.order)) &&
+    Array.isArray(item.references) && item.references.every(isReference) && unique(item.references.map(reference => reference.id)) &&
+    Array.isArray(item.dependencyIds) && item.dependencyIds.every(id => typeof id === 'string')
+  )) throw new Error('Invalid task definitions.')
+  if (!unique(value.map(item => item.id)) || !unique(value.map(item => JSON.stringify([item.topicId, item.order])))) {
+    throw new Error('Duplicate task definitions or positions.')
+  }
+  const graph = new Map(value.map(item => [item.id, { id: item.id, implementationId: item.topicId, dependencyIds: [] as string[] }]))
+  for (const item of value) {
+    const node = graph.get(item.id)!
+    for (const id of item.dependencyIds) {
+      validateTaskDependency(node, id, graph)
+      node.dependencyIds.push(id)
+    }
+  }
+  return value
 }
